@@ -8,7 +8,7 @@ use App\Models\JobCategory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
-class AddJobs extends Controller
+class CreateJobController extends Controller
 {
     public function store(Request $request)
     {
@@ -20,9 +20,6 @@ class AddJobs extends Controller
             'location' => 'nullable|string',
             'category_ids' => 'array',
         ]);
-
-
-        if (auth('sanctum')->user()) {
             $job = auth('sanctum')->user()->JobPostings()->create([
                 'title' => $request->title,
                 'description' => $request->description,
@@ -30,7 +27,6 @@ class AddJobs extends Controller
                 'type' => $request->type,
                 'location' => $request->location,
             ]);
-
             foreach (request('category_ids') as $categoryId){
                 JobCategory::query()->create([
                    'job_id' => $job->id,
@@ -44,10 +40,4 @@ class AddJobs extends Controller
                 'job' => $job
             ], 201);
         }
-
-        // Return a response if the user is not authenticated
-        return response()->json([
-            'message' => 'Unauthorized'
-        ], 401);
-    }
 }

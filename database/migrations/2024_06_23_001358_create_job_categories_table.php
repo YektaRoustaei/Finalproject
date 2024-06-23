@@ -13,12 +13,9 @@ return new class extends Migration
     {
         Schema::create('job_categories', function (Blueprint $table) {
             $table->id();
-            $table->integer('job_id');
-            $table->integer('category_id');
+            $table->foreignId('job_id')->constrained('job_postings')->onDelete('cascade');
+            $table->foreignId('category_id')->constrained('categories')->onDelete('cascade');
             $table->timestamps();
-
-            $table->foreign('job_id')->references('id')->on('JobPostings')->onDelete('cascade');
-            $table->foreign('category_id')->references('id')->on('Category')->onDelete('cascade');
         });
     }
 

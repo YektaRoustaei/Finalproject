@@ -23,13 +23,13 @@ class JobPosting extends Model
         });
     }
 
+    public function categories()
+    {
+        return $this->belongsToMany(Category::class, 'job_categories');
+    }
+
     public function provider()
     {
         return $this->belongsTo(Provider::class);
-    }
-
-    public function categories()
-    {
-        return $this->belongsToMany(Category::class); // Correct the model name to Category
     }
 }

@@ -13,8 +13,13 @@ class Category extends Model
         'title'
     ];
 
+    protected static function newFactory()
+    {
+        return \Database\Factories\CategoryFactory::new();
+    }
+
     public function jobs()
     {
-        return $this->belongsToMany(Job::class);
+        return $this->belongsToMany(JobPosting::class, 'job_categories');
     }
 }
