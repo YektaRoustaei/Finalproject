@@ -22,5 +22,9 @@ class Seeker extends  Authenticatable
     protected static function newFactory()
     {
         return \Database\Factories\SeekerFactory::new();
-    }   
+    }
+    public function JobPostings()
+    {
+        return $this->hasMany(AppliedJob::class);
+    }
 }

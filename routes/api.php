@@ -19,7 +19,7 @@ Route::prefix('provider')->group(function () {
     Route::post('login', [ProviderAuthController::class, 'login'])->middleware([PrepareRequestForLoginProvider::class, CheckCredential::class]);
     Route::post('logout', [ProviderAuthController::class, 'logout'])->middleware([EnsureUserIsProvider::class]);
     Route::prefix('jobs')->group(function () {
-        Route::post('create', [CreateJobController::class, 'store'])->middleware([PrepareCreatingJobProcess::class]); 
+        Route::post('create', [CreateJobController::class, 'store'])->middleware([PrepareCreatingJobProcess::class]);
     })->middleware([EnsureUserIsProvider::class]);
 });
 
@@ -27,4 +27,7 @@ Route::prefix('seeker')->group(function () {
     Route::post('register', [SeekerAuthController::class, 'register'])->middleware([PrepareRequestForRegisteringSeeker::class]);
     Route::post('login', [SeekerAuthController::class, 'login'])->middleware([PrepareRequestForLoginSeeker::class, SeekerLoginCheckCredential::class]);
     Route::post('logout', [SeekerAuthController::class, 'logout'])->middleware([EnsureUserIsSeeker::class]);
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('apply', [AddJobs::class, 'store']);
+    });
 });
