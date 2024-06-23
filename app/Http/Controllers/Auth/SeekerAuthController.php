@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Models\Seeker;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -21,6 +21,7 @@ class SeekerAuthController extends Controller
             'phonenumber' => 'required|integer',
             'password' => 'required|string|min:8',
         ]);
+
 
         $seeker = Seeker::query()->create([
             'first_name' => $request->first_name,
