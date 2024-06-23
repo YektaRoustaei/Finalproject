@@ -39,15 +39,9 @@ class ProviderAuthController extends Controller
         return response()->json(['access_token' => $token, 'token_type' => 'Bearer']);
     }
 
-    public function logout(Request $request)
+    public function logout()
     {
-        if (auth('sanctum')->user()) {
-            auth('sanctum')->user()->tokens()->delete();;
-            return response()->json('Logged out successfully');
-        } else {
-            return response()->json('User not authenticated', 401);
-        }
+        auth('sanctum')->user()->tokens()->delete();;
+        return response()->json('Logged out successfully', 200);
     }
-
-    //
 }

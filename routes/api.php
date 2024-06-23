@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\ProviderAuthController;
 use App\Http\Controllers\Auth\SeekerAuthController;
 use App\Http\Controllers\AddJobs;
+use App\Http\Middleware\EnsureUserIsProvider;
 use App\Http\Middleware\Provider\Authentication\Login\CheckCredential;
 use App\Http\Middleware\Provider\Authentication\Login\PrepareRequestForLoginProvider;
 use App\Http\Middleware\Provider\Authentication\Register\PrepareRequestForRegisteringProvider;
@@ -11,7 +12,7 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('provider')->group(function () {
     Route::post('register', [ProviderAuthController::class, 'register'])->middleware([PrepareRequestForRegisteringProvider::class]);
     Route::post('login', [ProviderAuthController::class, 'login'])->middleware([PrepareRequestForLoginProvider::class, CheckCredential::class]);
-    Route::post('logout', [ProviderAuthController::class, 'logout'])->middleware('auth:sanctum');
+    Route::post('logout', [ProviderAuthController::class, 'logout'])->middleware([EnsureUserIsProvider::class]);
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('addjobs', [AddJobs::class, 'store']);

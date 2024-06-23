@@ -18,4 +18,9 @@ class Seeker extends  Authenticatable
         'phonenumber',
         'password',
     ];
+
+    protected static function newFactory()
+    {
+        return \Database\Factories\SeekerFactory::new();
+    }   
 }

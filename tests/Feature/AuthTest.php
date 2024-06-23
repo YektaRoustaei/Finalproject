@@ -2,9 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Http\Middleware\EnsureUserIsProvider;
 use App\Models\Provider;
+use App\Models\Seeker;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class AuthTest extends TestCase
@@ -144,5 +148,43 @@ class AuthTest extends TestCase
         $response = $this->postJson('api/provider/login', $data);
         $response->assertStatus(422);
         $this->assertCount(2, $response['errors']);         
+    }
+
+    public function test_provider_can_logout_successfully()
+    {
+        $provider = Provider::factory()->create();
+
+        Sanctum::actingAs($provider, ['*']);
+
+        $response = $this->postJson('api/provider/logout');
+
+        $response->assertStatus(200);
+
+        $this->assertCount(0, $provider->tokens);
+    }
+
+    public function test_unauthenticated_user_cannot_logout()
+    {
+        $response = $this->postJson('api/provider/logout');
+
+        $response->assertStatus(401)
+                 ->assertJson(['error' => 'Unauthorized']);
+    }
+    public function test_middleware_rejects_non_provider_user()
+    {
+        $seeker = Seeker::factory()->create();
+
+        Sanctum::actingAs($seeker, ['*']);
+
+        $request = Request::create('api/provider/logout', 'POST');
+
+        $middleware = new EnsureUserIsProvider();
+
+        $response = $middleware->handle($request, function ($req) {
+            return response()->json(['success' => true], 200);
+        });
+
+        $this->assertEquals(401, $response->status());
+        $this->assertEquals(['error' => 'Unauthorized'], $response->getData(true));
     }
 }

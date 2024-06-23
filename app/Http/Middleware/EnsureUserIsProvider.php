@@ -17,8 +17,10 @@ class EnsureUserIsProvider
      */
     public function handle(Request $request, Closure $next): mixed
     {
-        if (Auth::guard('sanctum')->check() && Auth::guard('sanctum')->user() instanceof \App\Models\Seeker) {
 
+
+        if (Auth::guard('sanctum')->check() && Auth::guard('sanctum')->user() instanceof \App\Models\Provider) {
+        
             return $next($request);
         }
         return response()->json(['error' => 'Unauthorized'], 401);
