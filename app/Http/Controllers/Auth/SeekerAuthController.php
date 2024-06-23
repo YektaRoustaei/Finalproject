@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\Seeker;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -13,52 +14,30 @@ class SeekerAuthController extends Controller
 {
     public function register(Request $request)
     {
-        $request->validate([
-            'first_name' => 'required|string|max:255',
-            'last_name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:seekers',
-            'address' => 'required|string',
-            'phonenumber' => 'required|integer',
-            'password' => 'required|string|min:8',
-        ]);
-
-
-        $seeker = Seeker::query()->create([
-            'first_name' => $request->first_name,
-            'last_name' => $request->last_name,
-            'email' => $request->email,
-            'address' => $request->address,
-            'phonenumber' => $request->phonenumber,
-            'password' => Hash::make($request->password),
-        ]);
+        try {
+            $seeker = Seeker::query()->create([
+                'first_name' => $request->first_name,
+                'last_name' => $request->last_name,
+                'email' => $request->email,
+                'address' => $request->address,
+                'phonenumber' => $request->phonenumber,
+                'password' => Hash::make($request->password),
+            ]);
+        } catch (Exception $e) {
+            report($e);
+        }
 
         return response()->json($seeker);
     }
     public function login(Request $request)
     {
-        $request->validate([
-            'email' => 'required|string|email',
-            'password' => 'required|string',
-        ]);
-
-        $seeker = Seeker::where('email', $request->email)->first();
-
-        if (! $seeker || ! Hash::check($request->password, $seeker->password)) {
-            Log::info('Invalid login attempt', ['seeker' => $seeker, 'password_check' => Hash::check($request->password, $seeker->password)]);
-            throw ValidationException::withMessages([
-                'email' => ['The provided credentials are incorrect.'],
-            ]);
-        }
-
-        $token = $seeker->createToken('auth_token')->plainTextToken;
-
+        $token = $request->seeker->createToken('auth_token')->plainTextToken;
         return response()->json(['access_token' => $token, 'token_type' => 'Bearer']);
     }
 
     public function logout(Request $request)
     {
         $request->user()->currentAccessToken()->delete();
-
         return response()->json('Logged out successfully');
     }
 }
