@@ -19,6 +19,11 @@ class Provider extends Authenticatable
         'password',
     ];
 
+    protected static function newFactory()
+    {
+        return \Database\Factories\ProviderFactory::new();
+    }
+
     public function JobPostings()
     {
         return $this->hasMany(JobPosting::class);
