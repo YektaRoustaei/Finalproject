@@ -35,15 +35,7 @@ class ProviderAuthController extends Controller
      */
     public function login(Request $request)
     {
-        $provider = Provider::query()->where('email',$request->email)->first();
-
-        if (! $provider || ! Hash::check($request->password, $provider->password)) {
-            Log::info('Invalid login attempt', ['seeker' => $provider, 'password_check' => Hash::check($request->password, $provider->password)]);
-            throw ValidationException::withMessages([
-                'email' => ['The provided credentials are incorrect.'],
-            ]);
-        }
-        $token = $provider->createToken('auth_token')->plainTextToken;
+        $token = $request->provider->createToken('auth_token')->plainTextToken;
         return response()->json(['access_token' => $token, 'token_type' => 'Bearer']);
     }
 
