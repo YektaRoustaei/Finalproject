@@ -387,8 +387,7 @@ class AuthTest extends TestCase
     public function test_unauthenticated_seeker_user_cannot_logout()
     {
         $response = $this->postJson('api/seeker/logout');
-
         $response->assertStatus(401)
-                 ->assertJson(['message' => 'Unauthenticated.']);
+                 ->assertJson(['error' => 'Unauthorized']);
     }
 }

@@ -16,6 +16,12 @@ class JobPosting extends Model
         'type',
         'location', // Ensure this is fillable
     ];
+
+    protected static function newFactory()
+    {
+        return \Database\Factories\JobPostingFactory::new();
+    }
+
     protected static function booted()
     {
         static::creating(function ($job) {
