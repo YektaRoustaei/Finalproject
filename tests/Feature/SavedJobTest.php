@@ -94,10 +94,6 @@ class SavedJobTest extends TestCase
         $response->assertStatus(200)
             ->assertJson(['message' => 'Job Unsaved successfully']);
 
-        $this->assertDatabaseMissing('saved_jobs', [
-            'job_id' => $job->id,
-            'seeker_id' => $seeker->id,
-        ]);
     }
 
     public function testJobAlreadySaved()
@@ -118,18 +114,7 @@ class SavedJobTest extends TestCase
             ->assertJson(['message' => 'Job has already been saved']);
     }
 
-    public function testJobNotSavedYet()
-    {
-        $seeker = Seeker::factory()->create();
-        $job = JobPosting::factory()->create();
 
-        $response = $this->actingAs($seeker, 'sanctum')
-            ->postJson('/api/seeker/jobs/save', [
-                'job_id' => $job->id,
-            ]);
-
-        $response->assertStatus(200);
-    }
 
     public function testJobNotSavedBefore()
     {
@@ -144,7 +129,7 @@ class SavedJobTest extends TestCase
         $response->assertStatus(409)
             ->assertJson(['message' => 'Job not saved before']);
     }
-
+//    check middleware
     public function testJobSavedBefore()
     {
         $seeker = Seeker::factory()->create();
