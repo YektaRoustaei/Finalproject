@@ -6,6 +6,7 @@ use App\Http\Controllers\Auth\SeekerAuthController;
 use App\Http\Controllers\CreateJobController;
 use App\Http\Controllers\SaveJobController;
 use App\Http\Controllers\UnSaveJobController;
+use App\Http\Controllers\JobList;
 use App\Http\Middleware\EnsureUserIsProvider;
 use App\Http\Middleware\EnsureUserIsSeeker;
 use App\Http\Middleware\Provider\Authentication\Login\CheckCredential;
@@ -42,3 +43,5 @@ Route::prefix('seeker')->group(function () {
 
     });
 });
+
+Route::get('joblist',[JobList::class,'jobList']);
