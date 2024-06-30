@@ -40,7 +40,7 @@ class PrepareRequestForRegisteringProvider
             'company_name' => 'required|string|max:255',
             'description' => 'required|string',
             'address' => 'required|string',
-            'telephone' => 'required|integer',
+            'telephone' => 'required|string',
             'email' => 'required|string|email|max:255|unique:providers',
             'password' => 'required|string|min:8',
         ];

@@ -13,7 +13,7 @@ return new class extends Migration
             $table->string('company_name');
             $table->text('description');
             $table->string('address');
-            $table->integer('telephone');
+            $table->string('telephone');
             $table->string('email')->unique();
             $table->string('password');
             $table->rememberToken();
