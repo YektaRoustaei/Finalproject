@@ -32,12 +32,12 @@ class SeekerAuthController extends Controller
     public function login(Request $request)
     {
         $token = $request->seeker->createToken('auth_token')->plainTextToken;
-        return response()->json(['access_token' => $token, 'token_type' => 'Bearer']);
+        return response()->json(['Seeker_token' => $token, 'token_type' => 'Bearer']);
     }
 
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
-        return response()->json('Logged out successfully');
+        auth('sanctum')->user()->tokens()->delete();
+        return response()->json('Logged out successfully', 200);
     }
 }

@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
-use App\Models\CategoryJob;
 use App\Models\JobCategory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -27,12 +26,14 @@ class CreateJobController extends Controller
                 'type' => $request->type,
                 'location' => $request->location,
             ]);
-            foreach (request('category_ids') as $categoryId){
-                JobCategory::query()->create([
-                   'job_id' => $job->id,
-                   'category_id' => $categoryId
+        if ($request->has('category_ids')) {
+            foreach ($request->category_ids as $categoryId) {
+                JobCategory::create([
+                    'job_id' => $job->id,
+                    'category_id' => $categoryId
                 ]);
             }
+        }
 
             // Return a response with a message and the job data
             return response()->json([

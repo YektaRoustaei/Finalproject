@@ -36,12 +36,13 @@ class ProviderAuthController extends Controller
     public function login(Request $request)
     {
         $token = $request->provider->createToken('auth_token')->plainTextToken;
-        return response()->json(['access_token' => $token, 'token_type' => 'Bearer']);
+        return response()->json(['Provider_token' => $token, 'token_type' => 'Bearer', 'company_name' => $request->provider->company_name]);
+
     }
 
     public function logout()
     {
-        auth('sanctum')->user()->tokens()->delete();;
+        auth('sanctum')->user()->tokens()->delete();
         return response()->json('Logged out successfully', 200);
     }
 }
