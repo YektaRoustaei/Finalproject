@@ -9,6 +9,7 @@ use App\Http\Controllers\UnSaveJobController;
 use App\Http\Controllers\JobList;
 use App\Http\Controllers\CategoryListController;
 use App\Http\Controllers\ProviderInfo;
+use App\Http\Controllers\CompanyListController;
 use App\Http\Controllers\SeekerInfo;
 
 use App\Http\Middleware\EnsureUserIsProvider;
@@ -52,6 +53,7 @@ Route::prefix('seeker')->group(function () {
 });
 
 Route::get('joblist',[JobList::class,'jobList']);
+Route::get('companyList',[CompanyListController::class,'companyList']);
 Route::get('categories',[CategoryListController::class,'categoryList']);
 
 Route::middleware('auth:sanctum')->get('/provider', [ProviderInfo::class, 'getProvider']);
