@@ -17,6 +17,7 @@ class ProviderInfo extends Controller
             'address' => $provider->address,
             'telephone' => $provider->telephone,
             'email' => $provider->email,
+            'id' => $provider->id,
 
         ]);
     }

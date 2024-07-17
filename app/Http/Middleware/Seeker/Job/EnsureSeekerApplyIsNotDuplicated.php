@@ -10,7 +10,7 @@ class EnsureSeekerApplyIsNotDuplicated
     {
         $seeker = auth('sanctum')->user();
         $jobId = $request->job_id;
-        $appliedJob = AppliedJob::query()->where('seeker_id', $seeker->id)->where('job_id', $jobId)->first();
+        $appliedJob = AppliedJob::query()->where('Seeker_id', $seeker->id)->where('job_id', $jobId)->first();
         if ($appliedJob) {
             return response()->json(['error' => 'You have already applied for this job'], 400);
         }

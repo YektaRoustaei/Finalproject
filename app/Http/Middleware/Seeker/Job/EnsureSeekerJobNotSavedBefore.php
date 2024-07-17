@@ -15,10 +15,10 @@ class EnsureSeekerJobNotSavedBefore
      */
     public function handle(Request $request, Closure $next): mixed
     {
-        $seeker = auth()->user();
+        $seeker_id = auth('sanctum')->id();
         $savedJob = SavedJob::where([
             'job_id' => $request->job_id,
-            'seeker_id' => $seeker->id,
+            'seeker_id' => $seeker_id,
         ])->first();
 
         if ($savedJob) {

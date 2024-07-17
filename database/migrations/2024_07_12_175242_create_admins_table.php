@@ -11,14 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('job_postings', function (Blueprint $table) {
+        Schema::create('admins', function (Blueprint $table) {
             $table->id();
-            $table->string('title');
-            $table->text('description');
-            $table->foreignId('provider_id')->constrained()->onDelete('cascade');
-            $table->decimal('salary', 10, 2);
-            $table->string('type');
-            $table->string('location')->nullable();
+            $table->string('username')->unique();
+            $table->string('password'); // Changed to string
             $table->timestamps();
         });
     }
@@ -28,6 +24,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('job_postings');
+        Schema::dropIfExists('admins');
     }
 };

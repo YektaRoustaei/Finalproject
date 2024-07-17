@@ -5,16 +5,17 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Category extends Model
+class JobRequirement extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'title',
+        'job_posting_id',
+        'requirement',
     ];
 
-    public function jobPostings()
+    public function jobPosting()
     {
-        return $this->belongsToMany(JobPosting::class, 'job_categories', 'category_id', 'job_id');
+        return $this->belongsTo(JobPosting::class);
     }
 }

@@ -7,9 +7,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Laravel\Sanctum\HasApiTokens;
 
-class Seeker extends  Authenticatable
+class Seeker extends Authenticatable
 {
     use HasFactory, HasApiTokens;
+
     protected $fillable = [
         'first_name',
         'last_name',
@@ -23,8 +24,18 @@ class Seeker extends  Authenticatable
     {
         return \Database\Factories\SeekerFactory::new();
     }
-    public function JobPostings()
+
+    public function appliedJobs()
     {
         return $this->hasMany(AppliedJob::class);
+    }
+
+    public function savedJobs()
+    {
+        return $this->hasMany(SavedJob::class);
+    }
+    public function curriculumVitae()
+    {
+        return $this->hasMany(CurriculumVitae::class,'seeker_id');
     }
 }

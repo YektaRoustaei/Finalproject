@@ -8,34 +8,28 @@ use Illuminate\Database\Eloquent\Model;
 class JobPosting extends Model
 {
     use HasFactory;
+
     protected $fillable = [
         'title',
         'description',
-        'provider_id',
         'salary',
         'type',
-        'location', // Ensure this is fillable
+        'location',
+        'provider_id',
     ];
-
-    protected static function newFactory()
-    {
-        return \Database\Factories\JobPostingFactory::new();
-    }
-
-    protected static function booted()
-    {
-        static::creating(function ($job) {
-            $job->location = $job->provider->location;
-        });
-    }
 
     public function categories()
     {
-        return $this->belongsToMany(Category::class, 'job_categories');
+        return $this->belongsToMany(Category::class, 'job_categories', 'job_id', 'category_id');
+    }
+
+    public function requirements()
+    {
+        return $this->hasMany(JobRequirement::class);
     }
 
     public function provider()
     {
-        return $this->belongsTo(Provider::class);
+        return $this->belongsTo(User::class, 'provider_id');
     }
 }

@@ -5,18 +5,27 @@ use App\Http\Controllers\Auth\ProviderAuthController;
 use App\Http\Controllers\Auth\SeekerAuthController;
 use App\Http\Controllers\CreateJobController;
 use App\Http\Controllers\SaveJobController;
+use App\Http\Controllers\SkillsController;
 use App\Http\Controllers\UnSaveJobController;
 use App\Http\Controllers\JobList;
 use App\Http\Controllers\CategoryListController;
 use App\Http\Controllers\ProviderInfo;
 use App\Http\Controllers\CompanyListController;
 use App\Http\Controllers\SeekerInfo;
+use App\Http\Controllers\CreateCVController;
+
 
 use App\Http\Middleware\EnsureUserIsProvider;
 use App\Http\Middleware\EnsureUserIsSeeker;
 use App\Http\Middleware\Provider\Authentication\Login\CheckCredential;
 use App\Http\Middleware\Provider\Authentication\Login\PrepareRequestForLoginProvider;
 use App\Http\Middleware\Provider\Authentication\Register\PrepareRequestForRegisteringProvider;
+
+use App\Http\Middleware\Admin\PrepareRequestForLoginAdmin;
+use App\Http\Middleware\Admin\CheckCredentialAdmin;
+use App\Http\Middleware\Admin\EnsureUserIsAdmin;
+use App\Http\Controllers\Auth\AdminAuthController;
+
 use App\Http\Middleware\Provider\Job\PrepareCreatingJobProcess;
 use App\Http\Middleware\Seeker\Authentication\Login\CheckCredential as SeekerLoginCheckCredential;
 use App\Http\Middleware\Seeker\Authentication\Login\PrepareRequestForLoginSeeker;
@@ -38,6 +47,12 @@ Route::prefix('provider')->group(function () {
     });
 });
 
+Route::prefix('admin')->group(function () {
+    Route::post('login', [AdminAuthController::class, 'login'])->middleware([PrepareRequestForLoginAdmin::class,CheckCredentialAdmin::class]);
+    Route::post('logout', [AdminAuthController::class, 'logout'])->middleware([EnsureUserIsAdmin::class]);
+
+});
+
 Route::prefix('seeker')->group(function () {
     Route::post('register', [SeekerAuthController::class, 'register'])->middleware([PrepareRequestForRegisteringSeeker::class]);
     Route::post('login', [SeekerAuthController::class, 'login'])->middleware([PrepareRequestForLoginSeeker::class, SeekerLoginCheckCredential::class]);
@@ -47,7 +62,11 @@ Route::prefix('seeker')->group(function () {
     Route::middleware([EnsureUserIsSeeker::class])->prefix('jobs')->group(function () {
         Route::post('apply', [ApplyJobController::class, 'apply'])->middleware([PrepareRequestForApplyJob::class, EnsureSeekerApplyIsNotDuplicated::class]);
         Route::post('save', [SaveJobController::class, 'save'])->middleware([PrepareRequestForSaveJob::class,EnsureSeekerJobNotSavedBefore::class]);
-        Route::post('unsave', [UnSaveJobController::class, 'unsave'])->middleware([PrepareRequestForSaveJob::class,EnsureSeekerJobSavedBefore::class]);
+        Route::post('unsave', [SaveJobController::class, 'unsave'])->middleware([EnsureSeekerJobSavedBefore::class]);
+
+    });
+    Route::middleware([EnsureUserIsSeeker::class])->prefix('cv')->group(function () {
+        Route::post('create', [CreateCVController::class, 'store']);
 
     });
 });
@@ -55,5 +74,10 @@ Route::prefix('seeker')->group(function () {
 Route::get('joblist',[JobList::class,'jobList']);
 Route::get('companyList',[CompanyListController::class,'companyList']);
 Route::get('categories',[CategoryListController::class,'categoryList']);
+Route::get('skills',[SkillsController::class,'allSkills']);
+Route::post('skills',[SkillsController::class,'allSkills']);
+
+
+
 
 Route::middleware('auth:sanctum')->get('/provider', [ProviderInfo::class, 'getProvider']);

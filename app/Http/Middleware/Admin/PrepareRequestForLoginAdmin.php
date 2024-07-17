@@ -1,12 +1,13 @@
 <?php
 
-namespace App\Http\Middleware\Seeker\Job;
+namespace App\Http\Middleware\Admin;
 
 use Closure;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
-class PrepareRequestForApplyJob
+class PrepareRequestForLoginAdmin
 {
     /**
      * Handle an incoming request.
@@ -27,17 +28,19 @@ class PrepareRequestForApplyJob
             }
             return response()->json(['errors' => $errors], 422);
         }
-
         return $next($request);
     }
-    private function getData(Request $request) : array
+
+    private function getData(Request $request): array
     {
-        return $request->only(['job_id']);
+        return $request->only(['username', 'password']);
     }
-    private function getRules() : array
+
+    private function getRules(): array
     {
         return [
-            'job_id' => 'required|int|exists:job_postings,id',
+            'username' => 'required|string',
+            'password' => 'required|string',
         ];
     }
 }

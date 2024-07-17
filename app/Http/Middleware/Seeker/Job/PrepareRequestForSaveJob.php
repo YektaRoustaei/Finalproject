@@ -28,7 +28,9 @@ class PrepareRequestForSaveJob
             }
             return response()->json(['errors' => $errors], 422);
         }
+
         return $next($request);
+
     }
     private function getData(Request $request) : array
     {
