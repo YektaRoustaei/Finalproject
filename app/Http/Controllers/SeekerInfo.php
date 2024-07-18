@@ -2,10 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
-use App\Models\Seeker;
 
 class SeekerInfo extends Controller
 {
@@ -13,9 +11,12 @@ class SeekerInfo extends Controller
     {
         $seeker = Auth::guard('sanctum')->user();
 
-        // Fetch saved jobs and applied jobs
+        // Fetch saved jobs, applied jobs, and CVs with related details
         $savedJobs = $seeker->savedJobs;
         $appliedJobs = $seeker->appliedJobs;
+        $curriculumVitae = $seeker->curriculumVitae()
+            ->with(['seekerSkills.skill', 'educations', 'jobExperiences'])
+            ->get();
 
         return response()->json([
             'first_name' => $seeker->first_name,
@@ -25,6 +26,7 @@ class SeekerInfo extends Controller
             'phonenumber' => $seeker->phonenumber,
             'saved_jobs' => $savedJobs,
             'applied_jobs' => $appliedJobs,
+            'curriculum_vitae' => $curriculumVitae,
         ]);
     }
 }

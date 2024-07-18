@@ -4,6 +4,7 @@ use App\Http\Controllers\ApplyJobController;
 use App\Http\Controllers\Auth\ProviderAuthController;
 use App\Http\Controllers\Auth\SeekerAuthController;
 use App\Http\Controllers\CreateJobController;
+use App\Http\Controllers\ReccomendationController;
 use App\Http\Controllers\SaveJobController;
 use App\Http\Controllers\SkillsController;
 use App\Http\Controllers\UnSaveJobController;
@@ -76,6 +77,9 @@ Route::get('companyList',[CompanyListController::class,'companyList']);
 Route::get('categories',[CategoryListController::class,'categoryList']);
 Route::get('skills',[SkillsController::class,'allSkills']);
 Route::post('skills',[SkillsController::class,'allSkills']);
+
+Route::get('recommend',[ReccomendationController::class,'jobRecommend']);
+
 
 
 

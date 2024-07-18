@@ -62,4 +62,6 @@ class CreateCVController extends Controller
             'curriculum_vitae' => $curriculumVitae->load(['seekerSkills', 'educations', 'jobExperiences']),
         ], 201);
     }
+
+
 }
