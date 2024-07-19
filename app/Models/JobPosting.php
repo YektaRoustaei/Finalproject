@@ -23,9 +23,9 @@ class JobPosting extends Model
         return $this->belongsToMany(Category::class, 'job_categories', 'job_id', 'category_id');
     }
 
-    public function requirements()
+    public function jobskills()
     {
-        return $this->hasMany(JobRequirement::class);
+        return $this->hasMany(JobSkill::class);
     }
 
     public function provider()
