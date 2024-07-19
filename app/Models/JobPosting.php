@@ -25,11 +25,10 @@ class JobPosting extends Model
 
     public function jobskills()
     {
-        return $this->hasMany(JobSkill::class);
-    }
+        return $this->hasMany(JobSkill::class)->with('skill');    }
 
     public function provider()
     {
-        return $this->belongsTo(User::class, 'provider_id');
+        return $this->belongsTo(Provider::class, 'provider_id');
     }
 }
