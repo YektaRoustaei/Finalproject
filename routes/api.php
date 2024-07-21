@@ -3,6 +3,7 @@
 use App\Http\Controllers\ApplyJobController;
 use App\Http\Controllers\Auth\ProviderAuthController;
 use App\Http\Controllers\Auth\SeekerAuthController;
+use App\Http\Controllers\CityListController;
 use App\Http\Controllers\CreateJobController;
 use App\Http\Controllers\JobSkillsController;
 use App\Http\Controllers\ReccomendationController;
@@ -79,6 +80,8 @@ Route::get('categories',[CategoryListController::class,'categoryList']);
 Route::get('skills', [SkillsController::class, 'allSkills']);
 Route::post('skills', [SkillsController::class, 'store']);
 Route::get('jobskills', [JobSkillsController::class, 'jobskills']);
+Route::get('cities', [CityListController::class, 'cities']);
+
 
 
 

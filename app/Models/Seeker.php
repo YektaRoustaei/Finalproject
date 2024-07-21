@@ -15,9 +15,9 @@ class Seeker extends Authenticatable
         'first_name',
         'last_name',
         'email',
-        'address',
         'phonenumber',
         'password',
+        'city_id',
     ];
 
     protected static function newFactory()
@@ -37,5 +37,9 @@ class Seeker extends Authenticatable
     public function curriculumVitae()
     {
         return $this->hasMany(CurriculumVitae::class,'seeker_id');
+    }
+    public function city()
+    {
+        return $this->belongsTo(City::class);
     }
 }

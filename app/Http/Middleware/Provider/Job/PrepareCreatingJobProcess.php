@@ -30,7 +30,7 @@ class PrepareCreatingJobProcess
     }
     private function getData(Request $request) : array
     {
-        return $request->only(['title', 'description', 'salary', 'type', 'location', 'category_ids']);
+        return $request->only(['title', 'description', 'salary', 'type', 'category_ids']);
     }
     private function getRules() : array
     {
@@ -39,7 +39,6 @@ class PrepareCreatingJobProcess
             'description' => 'required|string',
             'salary' => 'required|string',
             'type' => 'required|string',
-            'location' => 'nullable|string',
             'category_ids' => 'array',
             'category_ids.*' => 'exists:categories,id', // Ensure each ID exists in the categories table
         ];

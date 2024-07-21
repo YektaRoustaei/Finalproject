@@ -12,7 +12,7 @@ use Illuminate\Validation\ValidationException;
 
 class CheckCredential
 {
-           /**
+    /**
      * Handle an incoming request.
      * @param Request $request
      * @param Closure $next

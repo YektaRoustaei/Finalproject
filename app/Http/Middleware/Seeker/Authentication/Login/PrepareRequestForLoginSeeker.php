@@ -26,14 +26,17 @@ class PrepareRequestForLoginSeeker
             }
             return response()->json(['errors' => $errors], 422);
         }
+
         return $next($request);
     }
     private function getData(Request $request) : array
     {
+
         return $request->only(['email' , 'password']);
     }
     private function getRules() : array
     {
+
         return [
             'email' => 'required|string|email',
             'password' => 'required|string',

@@ -16,9 +16,9 @@ return new class extends Migration
             $table->string('first_name');
             $table->string('last_name');
             $table->string('email')->unique();
-            $table->string('address');
             $table->string('phonenumber');
             $table->string('password');
+            $table->foreignId('city_id')->constrained()->onDelete('cascade');
             $table->rememberToken();
             $table->timestamps();
         });

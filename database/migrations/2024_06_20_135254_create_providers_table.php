@@ -12,10 +12,10 @@ return new class extends Migration
             $table->id();
             $table->string('company_name');
             $table->text('description');
-            $table->string('address');
             $table->string('telephone');
             $table->string('email')->unique();
             $table->string('password');
+            $table->foreignId('city_id')->constrained()->onDelete('cascade');
             $table->rememberToken();
             $table->timestamps();
         });

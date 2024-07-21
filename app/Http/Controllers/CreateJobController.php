@@ -20,7 +20,6 @@ class CreateJobController extends Controller
             'description' => 'required|string',
             'salary' => 'required|string',
             'type' => 'required|string',
-            'location' => 'nullable|string',
             'category_ids' => 'array',
             'jobskills' => 'array',
             'jobskills.*' => 'string', // Validate skill names
@@ -35,7 +34,6 @@ class CreateJobController extends Controller
                 'description' => $request->description,
                 'salary' => $request->salary,
                 'type' => $request->type,
-                'location' => $request->location,
             ]);
 
             // Attach categories to the job

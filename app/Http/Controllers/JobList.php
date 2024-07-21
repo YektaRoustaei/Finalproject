@@ -11,7 +11,7 @@ class JobList extends Controller
     public function jobList()
     {
         try {
-            $jobs = JobPosting::with(['provider', 'jobskills.skill'])->get();
+            $jobs = JobPosting::with(['provider.city', 'jobskills.skill'])->get();
             return response()->json($jobs);
         } catch (\Exception $e) {
             Log::error('Error fetching job listings: ' . $e->getMessage());
@@ -19,4 +19,3 @@ class JobList extends Controller
         }
     }
 }
-

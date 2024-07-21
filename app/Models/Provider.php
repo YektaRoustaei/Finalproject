@@ -13,10 +13,11 @@ class Provider extends Authenticatable
     protected $fillable = [
         'company_name',
         'description',
-        'address',
         'telephone',
         'email',
         'password',
+        'city_id',
+
     ];
 
     protected static function newFactory()
@@ -27,5 +28,9 @@ class Provider extends Authenticatable
     public function JobPostings()
     {
         return $this->hasMany(JobPosting::class);
+    }
+    public function city()
+    {
+        return $this->belongsTo(City::class);
     }
 }

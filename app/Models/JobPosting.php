@@ -14,7 +14,6 @@ class JobPosting extends Model
         'description',
         'salary',
         'type',
-        'location',
         'provider_id',
     ];
 

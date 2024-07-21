@@ -6,6 +6,7 @@ use App\Models\CurriculumVitae;
 use App\Models\JobPosting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class ReccomendationController extends Controller
 {
@@ -27,46 +28,107 @@ class ReccomendationController extends Controller
         // Get the skills from the curriculum vitae
         $skills = $curriculumVitae->seekerSkills->pluck('skill.name')->toArray();
 
-        // Get all job postings with their job skills and provider
-        $jobs = JobPosting::with(['jobSkills.skill', 'provider'])->get();
+        // Get the seeker city
+        $seekerCity = $seeker->city;
+        if (!$seekerCity) {
+            return response()->json(['error' => 'Seeker city not found.'], 404);
+        }
 
-        // Filter jobs based on the seeker's skills, requiring at least 3 matches
-        $recommendedJobs = $jobs->filter(function ($job) use ($skills) {
+        // Debugging: Log seeker city coordinates
+        Log::info('Seeker City:', ['name' => $seekerCity->city_name, 'Latitude' => $seekerCity->latitude, 'Longitude' => $seekerCity->longitude]);
+
+        // Get all job postings with their job skills, provider, and provider's city
+        $jobs = JobPosting::with(['jobSkills.skill', 'provider.city'])->get();
+
+        // Calculate distances and filter jobs based on skills
+        $jobsWithDistance = $jobs->map(function ($job) use ($skills, $seekerCity) {
             $jobSkills = $job->jobSkills->pluck('skill.name')->toArray();
             $matchingSkills = array_intersect($skills, $jobSkills);
             $matchingSkillsCount = count($matchingSkills);
             $job->matchingSkills = $matchingSkills; // Store matched skills in the job object
-            return $matchingSkillsCount >= 3;
-        });
 
-        // Get the IDs of recommended jobs
-        $recommendedJobIds = $recommendedJobs->pluck('id')->toArray();
+            // Get job provider city
+            $jobCity = $job->provider->city;
+            if (!$jobCity) {
+                Log::warning('Job City not found for job ID ' . $job->id);
+                return null;
+            }
 
-        // Filter out recommended jobs from all jobs
-        $nonRecommendedJobs = $jobs->reject(function ($job) use ($recommendedJobIds) {
-            return in_array($job->id, $recommendedJobIds);
-        });
+            // Debugging: Log job city coordinates
+            Log::info('Job City:', ['name' => $jobCity->city_name, 'Latitude' => $jobCity->latitude, 'Longitude' => $jobCity->longitude]);
 
-        // Combine recommended jobs first, followed by the rest
-        $sortedJobs = $recommendedJobs->merge($nonRecommendedJobs);
+            // Calculate the distance
+            $distance = $this->calculateDistance(
+                $seekerCity->latitude, $seekerCity->longitude,
+                $jobCity->latitude, $jobCity->longitude
+            );
+            $job->distance = $distance; // Store distance in the job object
+
+            return [
+                'job' => $job,
+                'matchingSkillsCount' => $matchingSkillsCount,
+                'distance' => $distance,
+                'isInSeekerCity' => $jobCity->city_name == $seekerCity->city_name
+            ];
+        })->filter(); // Remove null values
+
+        // Sort jobs primarily by whether they are in the seeker's city, then by distance
+        $sortedJobs = $jobsWithDistance->sort(function ($a, $b) {
+            if ($a['isInSeekerCity'] == $b['isInSeekerCity']) {
+                return $a['distance'] - $b['distance'];
+            }
+            return $b['isInSeekerCity'] - $a['isInSeekerCity'];
+        })->values(); // Reset array keys
 
         // Prepare the response with matched skills, job skills, and company name
-        $response = $sortedJobs->map(function ($job) {
+        $response = $sortedJobs->map(function ($item) {
+            $job = $item['job'];
             return [
                 'id' => $job->id,
                 'title' => $job->title,
                 'salary' => $job->salary,
                 'type' => $job->type,
                 'description' => $job->description,
-                'location' => $job->provider->address,
+                'location' => $job->provider->city->city_name ?? 'Unknown',
                 'company_name' => $job->provider->company_name,
-                'job_skills' => $job->jobSkills->pluck('skill.name')->toArray(), // Include job skills in the response
-                'matching_skills' => $job->matchingSkills ?? [], // Include matched skills in the response
+                'job_skills' => $job->jobSkills->pluck('skill.name')->toArray(),
+                'matching_skills' => $job->matchingSkills ?? [],
+                'distance' => $item['distance'],
             ];
         });
 
         return response()->json([
-            'jobs' => $response->values() // Use values() to reset the array keys
+            'jobs' => $response
         ]);
+    }
+
+    /**
+     * Calculate the distance between two points using the Haversine formula.
+     *
+     * @param float $lat1 Latitude of the first point
+     * @param float $lon1 Longitude of the first point
+     * @param float $lat2 Latitude of the second point
+     * @param float $lon2 Longitude of the second point
+     * @return float Distance in miles
+     */
+    private function calculateDistance($lat1, $lon1, $lat2, $lon2)
+    {
+        $earthRadius = 3959; // Radius of the Earth in miles
+
+        // Convert latitude and longitude from degrees to radians
+        $lat1Rad = deg2rad($lat1);
+        $lon1Rad = deg2rad($lon1);
+        $lat2Rad = deg2rad($lat2);
+        $lon2Rad = deg2rad($lon2);
+
+        // Calculate the differences
+        $deltaLat = $lat2Rad - $lat1Rad;
+        $deltaLon = $lon2Rad - $lon1Rad;
+
+        // Haversine formula
+        $a = sin($deltaLat / 2) ** 2 + cos($lat1Rad) * cos($lat2Rad) * sin($deltaLon / 2) ** 2;
+        $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
+
+        return $earthRadius * $c;
     }
 }

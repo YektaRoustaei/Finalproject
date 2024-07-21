@@ -23,6 +23,7 @@ class CurriculumVitae extends Model
         return $this->hasMany(SeekerSkill::class);
     }
 
+
     public function educations()
     {
         return $this->hasMany(Education::class);
