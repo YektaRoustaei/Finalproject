@@ -34,11 +34,33 @@ class ReccomendationController extends Controller
             return response()->json(['error' => 'Seeker city not found.'], 404);
         }
 
-        // Debugging: Log seeker city coordinates
-        Log::info('Seeker City:', ['name' => $seekerCity->city_name, 'Latitude' => $seekerCity->latitude, 'Longitude' => $seekerCity->longitude]);
+        // Retrieve search parameters
+        $searchTerm = trim($request->input('search_term'));
+        $city = trim($request->input('city'));
 
-        // Get all job postings with their job skills, provider, and provider's city
-        $jobs = JobPosting::with(['jobSkills.skill', 'provider.city'])->get();
+        // Query job postings with search functionality
+        $jobsQuery = JobPosting::query()
+            ->with(['jobSkills.skill', 'provider.city'])
+            ->when($searchTerm, function ($query, $searchTerm) {
+                $query->where('title', 'like', '%' . $searchTerm . '%')
+                    ->orWhere('description', 'like', '%' . $searchTerm . '%')
+                    ->orWhereHas('provider', function ($query) use ($searchTerm) {
+                        $query->where('company_name', 'like', '%' . $searchTerm . '%')
+                            ->orWhereHas('city', function ($query) use ($searchTerm) {
+                                $query->where('city_name', 'like', '%' . $searchTerm . '%');
+                            });
+                    })
+                    ->orWhereHas('jobSkills.skill', function ($query) use ($searchTerm) {
+                        $query->where('name', 'like', '%' . $searchTerm . '%');
+                    });
+            })
+            ->when($city, function ($query, $city) {
+                $query->whereHas('provider.city', function ($query) use ($city) {
+                    $query->where('city_name', 'like', '%' . $city . '%');
+                });
+            });
+
+        $jobs = $jobsQuery->get();
 
         // Calculate distances and filter jobs based on skills
         $jobsWithDistance = $jobs->map(function ($job) use ($skills, $seekerCity) {
@@ -53,9 +75,6 @@ class ReccomendationController extends Controller
                 Log::warning('Job City not found for job ID ' . $job->id);
                 return null;
             }
-
-            // Debugging: Log job city coordinates
-            Log::info('Job City:', ['name' => $jobCity->city_name, 'Latitude' => $jobCity->latitude, 'Longitude' => $jobCity->longitude]);
 
             // Calculate the distance
             $distance = $this->calculateDistance(
@@ -89,8 +108,8 @@ class ReccomendationController extends Controller
                 'salary' => $job->salary,
                 'type' => $job->type,
                 'description' => $job->description,
-                'location' => $job->provider->city->city_name ?? 'Unknown',
-                'company_name' => $job->provider->company_name,
+                'provider_city' => $job->provider->city->city_name ?? 'Unknown',
+                'provider_name' => $job->provider->company_name,
                 'job_skills' => $job->jobSkills->pluck('skill.name')->toArray(),
                 'matching_skills' => $job->matchingSkills ?? [],
                 'distance' => $item['distance'],

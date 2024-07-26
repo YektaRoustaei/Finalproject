@@ -40,6 +40,8 @@ use App\Http\Middleware\Seeker\Job\EnsureSeekerJobNotSavedBefore;
 use App\Http\Middleware\Seeker\Job\EnsureSeekerJobSavedBefore;
 use Illuminate\Support\Facades\Route;
 
+use App\Http\Controllers\JobSearchController;
+
 Route::prefix('provider')->group(function () {
     Route::post('register', [ProviderAuthController::class, 'register'])->middleware([PrepareRequestForRegisteringProvider::class]);
     Route::post('login', [ProviderAuthController::class, 'login'])->middleware([PrepareRequestForLoginProvider::class, CheckCredential::class]);
@@ -88,6 +90,7 @@ Route::get('cities', [CityListController::class, 'cities']);
 Route::get('recommend',[ReccomendationController::class,'jobRecommend']);
 
 
+Route::get('search', [JobSearchController::class,'search']);
 
 
 
