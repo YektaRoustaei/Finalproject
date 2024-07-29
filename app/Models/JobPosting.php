@@ -30,4 +30,8 @@ class JobPosting extends Model
     {
         return $this->belongsTo(Provider::class, 'provider_id');
     }
+    public function skills()
+    {
+        return $this->belongsToMany(Skill::class, 'job_skills', 'job_posting_id', 'skill_id');
+    }
 }

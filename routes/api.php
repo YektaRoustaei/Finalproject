@@ -4,6 +4,7 @@ use App\Http\Controllers\ApplyJobController;
 use App\Http\Controllers\Auth\ProviderAuthController;
 use App\Http\Controllers\Auth\SeekerAuthController;
 use App\Http\Controllers\CityListController;
+use App\Http\Controllers\CoverLetterController;
 use App\Http\Controllers\CreateJobController;
 use App\Http\Controllers\JobSkillsController;
 use App\Http\Controllers\ReccomendationController;
@@ -16,7 +17,7 @@ use App\Http\Controllers\ProviderInfo;
 use App\Http\Controllers\CompanyListController;
 use App\Http\Controllers\SeekerInfo;
 use App\Http\Controllers\CreateCVController;
-
+use App\Http\Controllers\manageApplicationsController;
 
 use App\Http\Middleware\EnsureUserIsProvider;
 use App\Http\Middleware\EnsureUserIsSeeker;
@@ -49,8 +50,19 @@ Route::prefix('provider')->group(function () {
     Route::get('get-info', ProviderInfo::class)->middleware([EnsureUserIsProvider::class]);
     Route::middleware([EnsureUserIsProvider::class])->prefix('jobs')->group(function () {
         Route::post('create', [CreateJobController::class, 'store'])->middleware([PrepareCreatingJobProcess::class]);
+        Route::get('applications', [manageApplicationsController::class, 'showAppliedJobs']);
+        Route::post('/applications/accept', [manageApplicationsController::class, 'accept']);
+        Route::post('/applications/reject', [manageApplicationsController::class, 'reject']);
+
+
+
     });
 });
+Route::delete('deletejob/{id}', [CreateJobController::class, 'destroy']);
+Route::put('updatejob/{id}', [CreateJobController::class, 'update']);
+
+
+
 
 Route::prefix('admin')->group(function () {
     Route::post('login', [AdminAuthController::class, 'login'])->middleware([PrepareRequestForLoginAdmin::class,CheckCredentialAdmin::class]);
@@ -72,11 +84,22 @@ Route::prefix('seeker')->group(function () {
     });
     Route::middleware([EnsureUserIsSeeker::class])->prefix('cv')->group(function () {
         Route::post('create', [CreateCVController::class, 'store']);
+        Route::put('edit', [CreateCVController::class, 'edit']);
+        Route::delete('delete', [CreateCVController::class, 'remove']);
+        Route::get('info', [CreateCVController::class, 'getCurriculumVitae']);
 
+
+
+    });
+    Route::middleware([EnsureUserIsSeeker::class])->prefix('coverletter')->group(function () {
+        Route::post('create', [CoverLetterController::class, 'store']);
     });
 });
 
 Route::get('joblist',[JobList::class,'jobList']);
+Route::get('job/{id}', [JobList::class, 'show']);
+
+
 Route::get('companyList',[CompanyListController::class,'companyList']);
 Route::get('categories',[CategoryListController::class,'categoryList']);
 Route::get('skills', [SkillsController::class, 'allSkills']);

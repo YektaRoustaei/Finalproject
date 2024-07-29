@@ -38,6 +38,10 @@ class Seeker extends Authenticatable
     {
         return $this->hasMany(CurriculumVitae::class,'seeker_id');
     }
+    public function coverLetter()
+    {
+        return $this->hasMany(CoverLetter::class,'seeker_id');
+    }
     public function city()
     {
         return $this->belongsTo(City::class);

@@ -11,13 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('curriculum_vitaes', function (Blueprint $table) {
+        Schema::create('cover_letters', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('seeker_id');
-            $table->string('pdf_path')->nullable();  // Add this line
-            $table->timestamps();
             $table->foreign('seeker_id')->references('id')->on('seekers')->onDelete('cascade');
-
+            $table->text('content')->nullable();  // Allows text content to be nullable
+            $table->string('pdf_path')->nullable();  // Stores the path of the uploaded PDF
+            $table->timestamps();
         });
     }
 
@@ -26,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('curriculum_vitaes');
+        Schema::dropIfExists('cover_letters');
     }
 };

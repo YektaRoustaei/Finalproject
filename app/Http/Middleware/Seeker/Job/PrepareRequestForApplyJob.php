@@ -5,11 +5,13 @@ namespace App\Http\Middleware\Seeker\Job;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Http\JsonResponse;
 
 class PrepareRequestForApplyJob
 {
     /**
      * Handle an incoming request.
+     *
      * @param Request $request
      * @param Closure $next
      * @return JsonResponse|mixed
@@ -30,14 +32,16 @@ class PrepareRequestForApplyJob
 
         return $next($request);
     }
+
     private function getData(Request $request) : array
     {
         return $request->only(['job_id']);
     }
+
     private function getRules() : array
     {
         return [
-            'job_id' => 'required|int|exists:job_postings,id',
+            'job_id' => 'required|integer|exists:job_postings,id', // Ensure table name is correct
         ];
     }
 }
