@@ -75,6 +75,10 @@ Route::prefix('seeker')->group(function () {
     Route::post('login', [SeekerAuthController::class, 'login'])->middleware([PrepareRequestForLoginSeeker::class, SeekerLoginCheckCredential::class]);
     Route::post('logout', [SeekerAuthController::class, 'logout'])->middleware([EnsureUserIsSeeker::class]);
     Route::get('get-info', SeekerInfo::class)->middleware([EnsureUserIsSeeker::class]);
+    Route::put('edit', [SeekerAuthController::class,'update']);
+    Route::delete('delete', [SeekerAuthController::class,'deleteAccount']);
+
+
 
     Route::middleware([EnsureUserIsSeeker::class])->prefix('jobs')->group(function () {
         Route::post('apply', [ApplyJobController::class, 'apply'])->middleware([PrepareRequestForApplyJob::class, EnsureSeekerApplyIsNotDuplicated::class]);
@@ -84,7 +88,7 @@ Route::prefix('seeker')->group(function () {
     });
     Route::middleware([EnsureUserIsSeeker::class])->prefix('cv')->group(function () {
         Route::post('create', [CreateCVController::class, 'store']);
-        Route::put('edit', [CreateCVController::class, 'edit']);
+        Route::put('update', [CreateCVController::class, 'update']);
         Route::delete('delete', [CreateCVController::class, 'remove']);
         Route::get('info', [CreateCVController::class, 'getCurriculumVitae']);
 

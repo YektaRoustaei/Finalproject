@@ -26,7 +26,7 @@ class CurriculumVitae extends Model
 
     public function educations()
     {
-        return $this->hasMany(Education::class);
+        return $this->hasMany(Education::class, 'curriculum_vitae_id', 'id');
     }
 
     public function jobExperiences()

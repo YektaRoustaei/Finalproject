@@ -20,6 +20,6 @@ class Education extends Model
 
     public function curriculumVitae()
     {
-        return $this->belongsTo(CurriculumVitae::class);
+        return $this->belongsTo(CurriculumVitae::class, 'curriculum_vitae_id', 'id');
     }
 }

@@ -13,11 +13,9 @@ use Illuminate\Support\Facades\Auth;
 
 class SeekerAuthController extends Controller
 {
-
     public function register(Request $request)
     {
         // Validate the request data
-
 
         try {
             // Create a new seeker
@@ -37,15 +35,6 @@ class SeekerAuthController extends Controller
         }
     }
 
-    /**
-     * Log in a seeker and return an authentication token.
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
-     * @throws ValidationException
-     */
-
-
     public function login(Request $request)
     {
         $seeker = $request->seeker;
@@ -59,17 +48,77 @@ class SeekerAuthController extends Controller
         ], 200);
     }
 
-
-
-    /**
-     * Log out a seeker and revoke their authentication token.
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
-     */
     public function logout(Request $request)
     {
         auth('sanctum')->user()->tokens()->delete();
         return response()->json('Logged out successfully', 200);
+    }
+
+    public function update(Request $request)
+    {
+        $user = Auth::guard('sanctum')->user();
+
+        if (!$user) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        // Validate the request data
+        $validatedData = $request->validate([
+            'first_name' => 'sometimes|string|max:255',
+            'last_name' => 'sometimes|string|max:255',
+            'email' => 'sometimes|email|max:255|unique:seekers,email,' . $user->id,
+            'phonenumber' => 'sometimes|string|max:20',
+            'password' => 'sometimes|string|min:6|confirmed',
+            'city_id' => 'sometimes|integer|exists:cities,id',
+        ]);
+
+        try {
+            // Log the validated data for debugging
+            Log::info('Validated Data:', ['data' => $validatedData]);
+
+            // If a new password is set, hash it before updating
+            if (isset($validatedData['password'])) {
+                $validatedData['password'] = Hash::make($validatedData['password']);
+            }
+
+            // Update the seeker's details
+            $user->update($validatedData);
+
+            // Return the updated user
+            $user->load('city'); // If you want to include related models like city
+
+            return response()->json($user, 200);
+        } catch (Exception $e) {
+            Log::error('Error updating seeker details: ' . $e->getMessage());
+            return response()->json(['error' => 'Update failed'], 500);
+        }
+    }
+
+    /**
+     * Delete the authenticated seeker's account.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function deleteAccount(Request $request)
+    {
+        $user = Auth::guard('sanctum')->user();
+
+        if (!$user) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        try {
+            // Delete the seeker's account
+            $user->delete();
+
+            // Log out the user by removing their tokens
+            $user->tokens()->delete();
+
+            return response()->json(['message' => 'Account deleted successfully'], 200);
+        } catch (Exception $e) {
+            Log::error('Error deleting seeker account: ' . $e->getMessage());
+            return response()->json(['error' => 'Account deletion failed'], 500);
+        }
     }
 }

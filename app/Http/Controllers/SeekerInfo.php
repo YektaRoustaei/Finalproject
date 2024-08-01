@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class SeekerInfo extends Controller
 {
@@ -14,8 +15,8 @@ class SeekerInfo extends Controller
      */
     public function __invoke(): JsonResponse
     {
-        // Fetch the authenticated seeker
-        $seeker = Auth::guard('sanctum')->user();
+        // Fetch the authenticated seeker with city relation
+        $seeker = Auth::guard('sanctum')->user()->load('city');
 
         // Fetch saved jobs, applied jobs, and CVs with related details
         $savedJobs = $seeker->savedJobs;
@@ -31,17 +32,49 @@ class SeekerInfo extends Controller
 
         $curriculumVitae = $seeker->curriculumVitae()
             ->with(['seekerSkills.skill', 'educations', 'jobExperiences'])
-            ->get();
+            ->get()
+            ->map(function ($cv) {
+                // Apply date transformation for educations and job experiences
+                $cv->educations = $cv->educations->map(function ($education) {
+                    $education->start_date = $this->formatDate($education->start_date);
+                    $education->end_date = $this->formatDate($education->end_date, true);
+                    return $education;
+                });
+
+                $cv->jobExperiences = $cv->jobExperiences->map(function ($jobExperience) {
+                    $jobExperience->start_date = $this->formatDate($jobExperience->start_date);
+                    $jobExperience->end_date = $this->formatDate($jobExperience->end_date, true);
+                    return $jobExperience;
+                });
+
+                return $cv;
+            });
 
         return response()->json([
             'first_name' => $seeker->first_name,
             'last_name' => $seeker->last_name,
             'email' => $seeker->email,
-            'address' => $seeker->address,
+            'address' => $seeker->city ? $seeker->city->city_name : null, // Fetch city name as address
             'phonenumber' => $seeker->phonenumber,
             'saved_jobs' => $savedJobs,
             'applied_jobs' => $appliedJobs,
             'curriculum_vitae' => $curriculumVitae,
         ]);
+    }
+
+    /**
+     * Format date to handle the special case of null or epoch date.
+     *
+     * @param  string|null  $date
+     * @param  bool  $isEndDate
+     * @return string
+     */
+    private function formatDate($date, $isEndDate = false)
+    {
+        if (!$date || Carbon::parse($date)->isSameDay(Carbon::createFromTimestamp(0))) {
+            return $isEndDate ? 'until now' : null;
+        }
+
+        return Carbon::parse($date)->toDateString();
     }
 }

@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('curriculum_vitae_id')->constrained()->onDelete('cascade');
             $table->string('institution');
             $table->string('degree');
-            $table->string('field_of_study');
+            $table->string('field_of_study')->nullable();
             $table->date('start_date');
             $table->date('end_date')->nullable();
 

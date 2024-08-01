@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\CurriculumVitae;
 use App\Models\SeekerSkill;
 use App\Models\Skill;
+use App\Models\Education;
+use App\Models\JobExperience;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -12,21 +14,22 @@ class CreateCVController extends Controller
 {
     public function store(Request $request)
     {
+        // Validate incoming data
         $request->validate([
-            'skills' => 'array',
+            'skills' => 'array|nullable',
             'skills.*.id' => 'nullable|integer|exists:skills,id',
-            'skills.*.name' => 'required|string|max:255',
-            'educations' => 'array',
-            'educations.*.degree' => 'required|string|max:255',
-            'educations.*.institution' => 'required|string|max:255',
+            'skills.*.name' => 'nullable|string|max:255',
+            'educations' => 'array|nullable',
+            'educations.*.degree' => 'required_with:educations.*.id|string|max:255',
+            'educations.*.institution' => 'required_with:educations.*.id|string|max:255',
             'educations.*.field_of_study' => 'nullable|string|max:255',
-            'educations.*.start_date' => 'required|date',
-            'educations.*.end_date' => 'nullable|date',
-            'job_experiences' => 'array',
-            'job_experiences.*.position' => 'required|string|max:255',
-            'job_experiences.*.company_name' => 'required|string|max:255',
-            'job_experiences.*.start_date' => 'required|date',
-            'job_experiences.*.end_date' => 'nullable|date',
+            'educations.*.start_date' => 'required_with:educations.*.id|date',
+            'educations.*.end_date' => 'nullable|date|after_or_equal:educations.*.start_date',
+            'job_experiences' => 'array|nullable',
+            'job_experiences.*.position' => 'required_with:job_experiences.*.id|string|max:255',
+            'job_experiences.*.company_name' => 'required_with:job_experiences.*.id|string|max:255',
+            'job_experiences.*.start_date' => 'required_with:job_experiences.*.id|date',
+            'job_experiences.*.end_date' => 'nullable|date|after_or_equal:job_experiences.*.start_date',
             'job_experiences.*.description' => 'nullable|string',
         ]);
 
@@ -51,6 +54,8 @@ class CreateCVController extends Controller
         // Save related educations
         if ($request->has('educations')) {
             foreach ($request->educations as $educationData) {
+                // Ensure end_date is null for ongoing education
+                $educationData['end_date'] = $educationData['end_date'] ?: null;
                 $curriculumVitae->educations()->create($educationData);
             }
         }
@@ -58,6 +63,8 @@ class CreateCVController extends Controller
         // Save related job experiences
         if ($request->has('job_experiences')) {
             foreach ($request->job_experiences as $jobExperienceData) {
+                // Ensure end_date is null for ongoing job experience
+                $jobExperienceData['end_date'] = $jobExperienceData['end_date'] ?: null;
                 $curriculumVitae->jobExperiences()->create($jobExperienceData);
             }
         }
@@ -69,41 +76,42 @@ class CreateCVController extends Controller
         ], 201);
     }
 
-    public function edit(Request $request, $id)
+    public function update(Request $request)
     {
+        // Validate incoming data
         $request->validate([
-            'skills' => 'array',
+            'cv_id' => 'required|integer|exists:curriculum_vitaes,id',
+            'skills' => 'array|nullable',
             'skills.*.id' => 'nullable|integer|exists:skills,id',
-            'skills.*.name' => 'required|string|max:255',
-            'educations' => 'array',
-            'educations.*.id' => 'nullable|integer|exists:educations,id',
-            'educations.*.degree' => 'required|string|max:255',
-            'educations.*.institution' => 'required|string|max:255',
+            'skills.*.name' => 'nullable|string|max:255',
+            'educations' => 'array|nullable',
+            'educations.*.id' => 'nullable|integer|exists:education,id',
+            'educations.*.degree' => 'required_with:educations.*.id|string|max:255',
+            'educations.*.institution' => 'required_with:educations.*.id|string|max:255',
             'educations.*.field_of_study' => 'nullable|string|max:255',
-            'educations.*.start_date' => 'required|date',
-            'educations.*.end_date' => 'nullable|date',
-            'job_experiences' => 'array',
+            'educations.*.start_date' => 'required_with:educations.*.id|date',
+            'educations.*.end_date' => 'nullable|date|after_or_equal:educations.*.start_date',
+            'job_experiences' => 'array|nullable',
             'job_experiences.*.id' => 'nullable|integer|exists:job_experiences,id',
-            'job_experiences.*.position' => 'required|string|max:255',
-            'job_experiences.*.company_name' => 'required|string|max:255',
-            'job_experiences.*.start_date' => 'required|date',
-            'job_experiences.*.end_date' => 'nullable|date',
+            'job_experiences.*.position' => 'required_with:job_experiences.*.id|string|max:255',
+            'job_experiences.*.company_name' => 'required_with:job_experiences.*.id|string|max:255',
+            'job_experiences.*.start_date' => 'required_with:job_experiences.*.id|date',
+            'job_experiences.*.end_date' => 'nullable|date|after_or_equal:job_experiences.*.start_date',
             'job_experiences.*.description' => 'nullable|string',
         ]);
 
-        $curriculumVitae = CurriculumVitae::findOrFail($id);
         $user = Auth::guard('sanctum')->user();
+        $cvId = $request->input('cv_id');
+        $curriculumVitae = CurriculumVitae::findOrFail($cvId);
 
-        // Ensure the user owns the CV
+        // Ensure the user owns the CurriculumVitae
         if ($curriculumVitae->seeker_id !== $user->id) {
-            return response()->json(['message' => 'Unauthorized'], 403);
+            return response()->json(['error' => 'Unauthorized'], 403);
         }
 
         // Update skills
         if ($request->has('skills')) {
-            // Delete existing skills
             SeekerSkill::where('curriculum_vitae_id', $curriculumVitae->id)->delete();
-
             foreach ($request->skills as $skillData) {
                 $skill = Skill::firstOrCreate(['name' => $skillData['name']]);
                 SeekerSkill::create([
@@ -117,9 +125,13 @@ class CreateCVController extends Controller
         if ($request->has('educations')) {
             foreach ($request->educations as $educationData) {
                 if (isset($educationData['id'])) {
-                    $education = $curriculumVitae->educations()->findOrFail($educationData['id']);
-                    $education->update($educationData);
+                    $education = $curriculumVitae->educations()->find($educationData['id']);
+                    if ($education) {
+                        $educationData['end_date'] = $educationData['end_date'] ?: null;
+                        $education->update($educationData);
+                    }
                 } else {
+                    $educationData['end_date'] = $educationData['end_date'] ?: null;
                     $curriculumVitae->educations()->create($educationData);
                 }
             }
@@ -129,9 +141,13 @@ class CreateCVController extends Controller
         if ($request->has('job_experiences')) {
             foreach ($request->job_experiences as $jobExperienceData) {
                 if (isset($jobExperienceData['id'])) {
-                    $jobExperience = $curriculumVitae->jobExperiences()->findOrFail($jobExperienceData['id']);
-                    $jobExperience->update($jobExperienceData);
+                    $jobExperience = $curriculumVitae->jobExperiences()->find($jobExperienceData['id']);
+                    if ($jobExperience) {
+                        $jobExperienceData['end_date'] = $jobExperienceData['end_date'] ?: null;
+                        $jobExperience->update($jobExperienceData);
+                    }
                 } else {
+                    $jobExperienceData['end_date'] = $jobExperienceData['end_date'] ?: null;
                     $curriculumVitae->jobExperiences()->create($jobExperienceData);
                 }
             }
@@ -141,17 +157,22 @@ class CreateCVController extends Controller
         return response()->json([
             'message' => 'Curriculum Vitae updated',
             'curriculum_vitae' => $curriculumVitae->load(['seekerSkills', 'educations', 'jobExperiences']),
-        ]);
+        ], 200);
     }
-
-    public function remove($id)
+    public function remove(Request $request)
     {
-        $curriculumVitae = CurriculumVitae::findOrFail($id);
+        // Validate that the request body contains the ID
+        $request->validate([
+            'id' => 'required|integer|exists:curriculum_vitaes,id',
+        ]);
+
+        $curriculumVitaeId = $request->input('id');
+        $curriculumVitae = CurriculumVitae::findOrFail($curriculumVitaeId);
         $user = Auth::guard('sanctum')->user();
 
         // Ensure the user owns the CV
         if ($curriculumVitae->seeker_id !== $user->id) {
-            return response()->json(['message' => 'Unauthorized'], 403);
+            return response()->json(['error' => 'Unauthorized'], 403);
         }
 
         // Delete related skills
@@ -193,4 +214,6 @@ class CreateCVController extends Controller
             'curriculum_vitae_id' => $curriculumVitae->id,
         ]);
     }
+
+
 }
