@@ -8,6 +8,7 @@ use App\Http\Controllers\CoverLetterController;
 use App\Http\Controllers\CreateJobController;
 use App\Http\Controllers\JobSkillsController;
 use App\Http\Controllers\ReccomendationController;
+use App\Http\Controllers\SeekerAlertController;
 use App\Http\Controllers\SaveJobController;
 use App\Http\Controllers\SkillsController;
 use App\Http\Controllers\UnSaveJobController;
@@ -115,6 +116,7 @@ Route::get('cities', [CityListController::class, 'cities']);
 
 
 Route::get('recommend',[ReccomendationController::class,'jobRecommend']);
+Route::get('seekeralert',[SeekerAlertController::class,'jobRecommend']);
 
 
 Route::get('search', [JobSearchController::class,'search']);

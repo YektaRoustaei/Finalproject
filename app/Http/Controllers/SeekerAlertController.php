@@ -2,24 +2,26 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\CurriculumVitae;
+use App\Models\AppliedJob;
 use App\Models\JobPosting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
-class ReccomendationController extends Controller
+class SeekerAlertController extends Controller
 {
     public function jobRecommend(Request $request)
     {
         $seeker = Auth::guard('sanctum')->user();
+
         if (!$seeker) {
             return response()->json(['error' => 'Unauthenticated.'], 401);
         }
 
+        // Fetch the most recent Curriculum Vitae
         $curriculumVitae = $seeker->curriculumVitae()
             ->with('seekerSkills.skill')
-            ->latest() // This orders by created_at in descending order
+            ->latest() // Orders by created_at in descending order
             ->first(); // Fetches the most recent one
 
         if (!$curriculumVitae) {
@@ -35,13 +37,19 @@ class ReccomendationController extends Controller
             return response()->json(['error' => 'Seeker city not found.'], 404);
         }
 
-        // Retrieve search parameters
-        $searchTerm = trim($request->input('search_term'));
-        $city = trim($request->input('city'));
+        // Retrieve search parameters from the URL
+        $searchTerm = trim($request->query('search_term')); // Use query method for URL parameters
+        $city = trim($request->query('city'));
+
+        // Fetch applied jobs for the seeker
+        $appliedJobIds = AppliedJob::where('seeker_id', $seeker->id)
+            ->pluck('job_id')
+            ->toArray();
 
         // Query job postings with search functionality
         $jobsQuery = JobPosting::query()
             ->with(['jobSkills.skill', 'provider.city'])
+            ->whereNotIn('id', $appliedJobIds) // Exclude applied jobs
             ->when($searchTerm, function ($query, $searchTerm) {
                 $query->where('title', 'like', '%' . $searchTerm . '%')
                     ->orWhere('description', 'like', '%' . $searchTerm . '%')
@@ -84,12 +92,13 @@ class ReccomendationController extends Controller
             );
             $job->distance = $distance; // Store distance in the job object
 
-            return [
+            // Return only jobs with more than 2 matching skills
+            return $matchingSkillsCount > 2 ? [
                 'job' => $job,
                 'matchingSkillsCount' => $matchingSkillsCount,
                 'distance' => $distance,
                 'isInSeekerCity' => $jobCity->city_name == $seekerCity->city_name
-            ];
+            ] : null;
         })->filter(); // Remove null values
 
         // Sort jobs primarily by whether they are in the seeker's city, then by distance
