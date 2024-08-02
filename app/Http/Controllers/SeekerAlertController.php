@@ -7,9 +7,44 @@ use App\Models\JobPosting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use App\Models\JobAlert;
+
 
 class SeekerAlertController extends Controller
 {
+    public function markNotInterested(Request $request)
+    {
+        $seeker = Auth::guard('sanctum')->user();
+
+        if (!$seeker) {
+            return response()->json(['error' => 'Unauthenticated.'], 401);
+        }
+
+        $request->validate([
+            'job_id' => 'required|exists:job_postings,id',
+        ]);
+
+        // Check if the job alert already exists
+        $jobAlert = JobAlert::where('job_id', $request->job_id)
+            ->where('seeker_id', $seeker->id)
+            ->first();
+
+        if ($jobAlert) {
+            // Update existing job alert status
+            $jobAlert->status = JobAlert::STATUS_NOT_INTERESTED;
+            $jobAlert->save();
+        } else {
+            // Create a new job alert
+            JobAlert::create([
+                'job_id' => $request->job_id,
+                'seeker_id' => $seeker->id,
+                'status' => JobAlert::STATUS_NOT_INTERESTED,
+            ]);
+        }
+
+        return response()->json(['message' => 'Job marked as not interested.']);
+    }
+
     public function jobRecommend(Request $request)
     {
         $seeker = Auth::guard('sanctum')->user();
@@ -46,10 +81,17 @@ class SeekerAlertController extends Controller
             ->pluck('job_id')
             ->toArray();
 
+        // Fetch jobs marked as "Not Interested"
+        $notInterestedJobIds = JobAlert::where('seeker_id', $seeker->id)
+            ->where('status', JobAlert::STATUS_NOT_INTERESTED)
+            ->pluck('job_id')
+            ->toArray();
+
         // Query job postings with search functionality
         $jobsQuery = JobPosting::query()
             ->with(['jobSkills.skill', 'provider.city'])
             ->whereNotIn('id', $appliedJobIds) // Exclude applied jobs
+            ->whereNotIn('id', $notInterestedJobIds) // Exclude jobs marked as "Not Interested"
             ->when($searchTerm, function ($query, $searchTerm) {
                 $query->where('title', 'like', '%' . $searchTerm . '%')
                     ->orWhere('description', 'like', '%' . $searchTerm . '%')

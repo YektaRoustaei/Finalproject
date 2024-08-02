@@ -85,6 +85,9 @@ Route::prefix('seeker')->group(function () {
         Route::post('apply', [ApplyJobController::class, 'apply'])->middleware([PrepareRequestForApplyJob::class, EnsureSeekerApplyIsNotDuplicated::class]);
         Route::post('save', [SaveJobController::class, 'save'])->middleware([PrepareRequestForSaveJob::class,EnsureSeekerJobNotSavedBefore::class]);
         Route::post('unsave', [SaveJobController::class, 'unsave'])->middleware([EnsureSeekerJobSavedBefore::class]);
+        Route::post('not-interested', [SeekerAlertController::class, 'markNotInterested']);
+
+
 
     });
     Route::middleware([EnsureUserIsSeeker::class])->prefix('cv')->group(function () {
