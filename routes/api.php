@@ -3,6 +3,7 @@
 use App\Http\Controllers\ApplyJobController;
 use App\Http\Controllers\Auth\ProviderAuthController;
 use App\Http\Controllers\Auth\SeekerAuthController;
+use App\Http\Controllers\CityController;
 use App\Http\Controllers\CityListController;
 use App\Http\Controllers\CoverLetterController;
 use App\Http\Controllers\CreateJobController;
@@ -49,6 +50,8 @@ Route::prefix('provider')->group(function () {
     Route::post('login', [ProviderAuthController::class, 'login'])->middleware([PrepareRequestForLoginProvider::class, CheckCredential::class]);
     Route::post('logout', [ProviderAuthController::class, 'logout'])->middleware([EnsureUserIsProvider::class]);
     Route::get('get-info', ProviderInfo::class)->middleware([EnsureUserIsProvider::class]);
+    Route::get('all', [ProviderInfo::class, 'getAllProviders']);
+
     Route::middleware([EnsureUserIsProvider::class])->prefix('jobs')->group(function () {
         Route::post('create', [CreateJobController::class, 'store'])->middleware([PrepareCreatingJobProcess::class]);
         Route::get('applications', [manageApplicationsController::class, 'showAppliedJobs']);
@@ -76,6 +79,8 @@ Route::prefix('seeker')->group(function () {
     Route::post('login', [SeekerAuthController::class, 'login'])->middleware([PrepareRequestForLoginSeeker::class, SeekerLoginCheckCredential::class]);
     Route::post('logout', [SeekerAuthController::class, 'logout'])->middleware([EnsureUserIsSeeker::class]);
     Route::get('get-info', SeekerInfo::class)->middleware([EnsureUserIsSeeker::class]);
+    Route::get('all', [SeekerInfo::class,'getAllSeekers']);
+
     Route::put('edit', [SeekerAuthController::class,'update']);
     Route::delete('delete', [SeekerAuthController::class,'deleteAccount']);
 
@@ -103,6 +108,18 @@ Route::prefix('seeker')->group(function () {
         Route::post('create', [CoverLetterController::class, 'store']);
     });
 });
+
+Route::prefix('city')->group(function () {
+    Route::post('register', [CityController::class, 'store'])
+        ->middleware([EnsureUserIsAdmin::class]);
+    Route::put('update/{id}', [CityController::class, 'update'])
+        ->middleware([EnsureUserIsAdmin::class]);
+    Route::delete('delete/{id}', [CityController::class, 'destroy'])
+        ->middleware([EnsureUserIsAdmin::class]);
+    Route::get('index', [CityController::class, 'index']);
+
+});
+
 
 Route::get('joblist',[JobList::class,'jobList']);
 Route::get('job/{id}', [JobList::class, 'show']);

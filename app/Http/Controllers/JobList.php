@@ -8,11 +8,30 @@ use Illuminate\Support\Facades\Log;
 
 class JobList extends Controller
 {
-    public function jobList()
+    public function jobList(Request $request)
     {
         try {
-            // Include 'categories' relationship here
-            $jobs = JobPosting::with(['provider.city', 'jobskills.skill', 'categories'])->get();
+            $searchTerm = $request->input('search_term');
+
+            // Initialize the query builder
+            $query = JobPosting::with(['provider']);
+
+            if ($searchTerm) {
+                $query->where(function($q) use ($searchTerm) {
+                    // Search in job title
+                    $q->where('title', 'like', '%' . $searchTerm . '%')
+                        // Search in job type
+                        ->orWhere('type', 'like', '%' . $searchTerm . '%')
+                        // Search in provider company name
+                        ->orWhereHas('provider', function($q) use ($searchTerm) {
+                            $q->where('company_name', 'like', '%' . $searchTerm . '%');
+                        });
+                });
+            }
+
+            // Execute the query and get the results
+            $jobs = $query->get();
+
             return response()->json($jobs);
         } catch (\Exception $e) {
             Log::error('Error fetching job listings: ' . $e->getMessage());
@@ -23,8 +42,8 @@ class JobList extends Controller
     public function show($id)
     {
         try {
-            // Include 'categories' relationship here
-            $job = JobPosting::with(['provider.city', 'jobskills.skill', 'categories'])
+            // Include 'provider' relationship here
+            $job = JobPosting::with(['provider'])
                 ->findOrFail($id);
 
             return response()->json($job);

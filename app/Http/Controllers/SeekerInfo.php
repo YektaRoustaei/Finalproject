@@ -4,7 +4,10 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use App\Models\Seeker; // Ensure you include the Seeker model
 use Carbon\Carbon;
+use Illuminate\Http\Request; // Ensure this import is included
+
 
 class SeekerInfo extends Controller
 {
@@ -60,6 +63,66 @@ class SeekerInfo extends Controller
             'applied_jobs' => $appliedJobs,
             'curriculum_vitae' => $curriculumVitae,
         ]);
+    }
+
+    /**
+     * Get all seekers with their details, optionally filtered by search input.
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function getAllSeekers(Request $request): JsonResponse
+    {
+        // Start query builder for seekers
+        $query = Seeker::with(['city', 'savedJobs', 'appliedJobs', 'curriculumVitae']);
+
+        // Apply search filter if 'search' parameter is present
+        if ($request->has('search')) {
+            $searchTerm = $request->input('search');
+            $query->where(function($q) use ($searchTerm) {
+                $q->where('first_name', 'like', '%' . $searchTerm . '%')
+                    ->orWhere('last_name', 'like', '%' . $searchTerm . '%')
+                    ->orWhere('email', 'like', '%' . $searchTerm . '%');
+            });
+        }
+
+        // Execute query and get results
+        $seekers = $query->get()->map(function ($seeker) {
+            return [
+                'first_name' => $seeker->first_name,
+                'last_name' => $seeker->last_name,
+                'email' => $seeker->email,
+                'address' => $seeker->city ? $seeker->city->city_name : null,
+                'phonenumber' => $seeker->phonenumber,
+                'saved_jobs' => $seeker->savedJobs,
+                'applied_jobs' => $seeker->appliedJobs->map(function ($appliedJob) {
+                    return [
+                        'job_id' => $appliedJob->job_id,
+                        'status' => $appliedJob->status,
+                        'curriculum_vitae_id' => $appliedJob->curriculum_vitae_id,
+                        'cover_letter_id' => $appliedJob->cover_letter_id,
+                        'created_at' => $appliedJob->created_at->toIso8601String(),
+                    ];
+                }),
+                'curriculum_vitae' => $seeker->curriculumVitae->map(function ($cv) {
+                    $cv->educations = $cv->educations->map(function ($education) {
+                        $education->start_date = $this->formatDate($education->start_date);
+                        $education->end_date = $this->formatDate($education->end_date, true);
+                        return $education;
+                    });
+
+                    $cv->jobExperiences = $cv->jobExperiences->map(function ($jobExperience) {
+                        $jobExperience->start_date = $this->formatDate($jobExperience->start_date);
+                        $jobExperience->end_date = $this->formatDate($jobExperience->end_date, true);
+                        return $jobExperience;
+                    });
+
+                    return $cv;
+                }),
+            ];
+        });
+
+        return response()->json($seekers);
     }
 
     /**
