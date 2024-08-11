@@ -2,15 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\JobCategory;
+use App\Models\Category;
 use App\Models\JobPosting;
-use App\Models\JobSkill;
 use App\Models\Skill;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use App\Models\Category;
-
 
 class CreateJobController extends Controller
 {
@@ -20,10 +17,14 @@ class CreateJobController extends Controller
         $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'required|string',
-            'salary' => 'required|string',
+            'salary' => 'required|numeric',
             'type' => 'required|string',
-            'category_ids' => 'array',
-            'jobskills' => 'array',
+            'expiry_date' => 'nullable|date',
+            'cover_letter' => 'required|boolean',
+            'question' => 'required|boolean',
+            'category_ids' => 'nullable|array',
+            'category_ids.*' => 'exists:categories,id',
+            'jobskills' => 'nullable|array',
             'jobskills.*' => 'string', // Validate skill names
         ]);
 
@@ -36,39 +37,34 @@ class CreateJobController extends Controller
                 'description' => $request->description,
                 'salary' => $request->salary,
                 'type' => $request->type,
+                'expiry_date' => $request->expiry_date,
+                'cover_letter' => $request->cover_letter,
+                'question' => $request->question,
             ]);
 
             // Attach categories to the job
             if ($request->has('category_ids')) {
-                foreach ($request->category_ids as $categoryId) {
-                    JobCategory::create([
-                        'job_id' => $job->id,
-                        'category_id' => $categoryId
-                    ]);
-                }
+                $job->categories()->sync($request->category_ids);
             }
 
             // Handle jobskills and link them to the job posting
             if ($request->has('jobskills')) {
+                $skillIds = [];
                 foreach ($request->jobskills as $skillName) {
-                    // Check if the skill exists, if not create it
                     $skill = Skill::firstOrCreate(['name' => $skillName]);
-
-                    // Link the skill to the job posting
-                    JobSkill::create([
-                        'job_posting_id' => $job->id,
-                        'skill_id' => $skill->id
-                    ]);
+                    $skillIds[] = $skill->id;
                 }
+                $job->skills()->sync($skillIds);
             }
 
             DB::commit();
 
             // Load relationships for response
-            $job = $job->load('categories', 'provider'); // Ensure these relationships are defined correctly
+            $job = $job->load('categories', 'provider', 'skills');
 
             return response()->json([
                 'message' => 'Job added',
+                'job_id' => $job->id,
                 'job' => $job
             ], 201);
 
@@ -92,10 +88,14 @@ class CreateJobController extends Controller
         $request->validate([
             'title' => 'sometimes|required|string|max:255',
             'description' => 'sometimes|required|string',
-            'salary' => 'sometimes|required|string',
+            'salary' => 'sometimes|required|numeric',
             'type' => 'sometimes|required|string',
-            'category_ids' => 'sometimes|array',
-            'jobskills' => 'sometimes|array',
+            'expiry_date' => 'nullable|date',
+            'cover_letter' => 'sometimes|required|boolean',
+            'question' => 'sometimes|required|boolean',
+            'category_ids' => 'nullable|array',
+            'category_ids.*' => 'exists:categories,id',
+            'jobskills' => 'nullable|array',
             'jobskills.*' => 'string', // Validate skill names
         ]);
 
@@ -103,7 +103,9 @@ class CreateJobController extends Controller
 
         try {
             $job = JobPosting::findOrFail($id);
-            $job->update($request->only(['title', 'description', 'salary', 'type']));
+            $job->update($request->only([
+                'title', 'description', 'salary', 'type', 'expiry_date', 'cover_letter', 'question'
+            ]));
 
             // Update categories if provided
             if ($request->has('category_ids')) {
@@ -151,9 +153,9 @@ class CreateJobController extends Controller
         try {
             $job = JobPosting::findOrFail($id);
 
-            // Remove categories and skills
-            $job->categories()->delete();
-            $job->skills()->delete();
+            // Detach categories and skills
+            $job->categories()->detach();
+            $job->skills()->detach();
 
             // Delete the job posting
             $job->delete();

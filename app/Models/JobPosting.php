@@ -15,6 +15,9 @@ class JobPosting extends Model
         'salary',
         'type',
         'provider_id',
+        'expiry_date',
+        'cover_letter',
+        'question',
     ];
 
     public function categories()
@@ -24,14 +27,21 @@ class JobPosting extends Model
 
     public function jobskills()
     {
-        return $this->hasMany(JobSkill::class)->with('skill');    }
+        return $this->hasMany(JobSkill::class)->with('skill');
+    }
 
     public function provider()
     {
         return $this->belongsTo(Provider::class, 'provider_id');
     }
+
     public function skills()
     {
         return $this->belongsToMany(Skill::class, 'job_skills', 'job_posting_id', 'skill_id');
+    }
+
+    public function questionnaires()
+    {
+        return $this->hasMany(Questionnaire::class);
     }
 }

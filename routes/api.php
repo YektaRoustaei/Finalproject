@@ -8,6 +8,7 @@ use App\Http\Controllers\CityListController;
 use App\Http\Controllers\CoverLetterController;
 use App\Http\Controllers\CreateJobController;
 use App\Http\Controllers\JobSkillsController;
+use App\Http\Controllers\QuestionnaireController;
 use App\Http\Controllers\ReccomendationController;
 use App\Http\Controllers\SeekerAlertController;
 use App\Http\Controllers\SaveJobController;
@@ -57,6 +58,8 @@ Route::prefix('provider')->group(function () {
         Route::get('applications', [manageApplicationsController::class, 'showAppliedJobs']);
         Route::post('/applications/accept', [manageApplicationsController::class, 'accept']);
         Route::post('/applications/reject', [manageApplicationsController::class, 'reject']);
+        Route::post('/question/create', [QuestionnaireController::class, 'store']);
+        Route::delete('/question/remove', [QuestionnaireController::class, 'destroy']);
 
 
 

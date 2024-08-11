@@ -20,13 +20,16 @@ class JobSearchController extends Controller
         $city = trim($request->input('city'));
         $jobType = trim($request->input('job_type')); // New job_type parameter
 
-        // If search parameters are provided, return search results
-        if ($searchTerm || $city || $jobType) {
-            return $this->searchJobs($searchTerm, $city, $jobType);
+        // If search parameters are provided, perform the search
+        $results = $this->searchJobs($searchTerm, $city, $jobType);
+
+        // If search results are empty and both searchTerm and city are provided,
+        // perform an alternative search with searchTerm and other cities
+        if ($city && $searchTerm && $results->isEmpty()) {
+            $results = $this->searchJobs($searchTerm, null, $jobType);
         }
 
-        // If no search parameters are provided, return all jobs
-        return $this->searchJobs(null, null, null);
+        return response()->json($results);
     }
 
     /**
@@ -35,11 +38,11 @@ class JobSearchController extends Controller
      * @param string|null $searchTerm
      * @param string|null $city
      * @param string|null $jobType
-     * @return JsonResponse
+     * @return \Illuminate\Support\Collection
      */
-    protected function searchJobs(?string $searchTerm, ?string $city, ?string $jobType): JsonResponse
+    protected function searchJobs(?string $searchTerm, ?string $city, ?string $jobType)
     {
-        $jobs = JobPosting::query()
+        return JobPosting::query()
             ->with(['provider.city', 'categories', 'jobskills.skill']) // Ensure skills relationship is included
             ->when($searchTerm, function ($query, $searchTerm) {
                 $query->where('title', 'like', '%' . $searchTerm . '%')
@@ -92,7 +95,5 @@ class JobSearchController extends Controller
                     'updated_at' => $job->updated_at,
                 ];
             });
-
-        return response()->json($jobs);
     }
 }

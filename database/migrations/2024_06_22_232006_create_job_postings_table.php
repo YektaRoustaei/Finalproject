@@ -18,6 +18,11 @@ return new class extends Migration
             $table->foreignId('provider_id')->constrained()->onDelete('cascade');
             $table->decimal('salary', 10, 2);
             $table->string('type');
+            $table->date('expiry_date')->nullable();
+            $table->boolean('cover_letter')->default(true);
+            $table->boolean('question')->default(false);
+
+
             $table->timestamps();
         });
     }
