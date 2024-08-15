@@ -17,7 +17,7 @@ return new class extends Migration
             $table->foreignId('seeker_id')->constrained('seekers')->onDelete('cascade');
             $table->foreignId('curriculum_vitae_id')->nullable()->constrained('curriculum_vitaes')->onDelete('set null');
             $table->foreignId('cover_letter_id')->nullable()->constrained('cover_letters')->onDelete('set null');
-            $table->enum('status', ['accepted', 'hold', 'rejected']);
+            $table->enum('status', ['accepted', 'hold', 'rejected', 'next_step', 'final_step']);
             $table->timestamps();
         });
     }

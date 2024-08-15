@@ -42,7 +42,9 @@ class manageApplicationsController extends Controller
         }
 
         // Retrieve applied jobs for the specified job ID
-        $appliedJobs = AppliedJob::with(['curriculumVitae', 'coverLetter', 'seeker'])
+        $appliedJobs = AppliedJob::with(['curriculumVitae' => function($query) {
+            $query->with(['seekerSkills.skill', 'jobExperiences', 'educations']);
+        }, 'coverLetter', 'seeker'])
             ->where('job_id', $jobId)
             ->get();
 
@@ -52,19 +54,18 @@ class manageApplicationsController extends Controller
 
         // Map through the applied jobs to include related information
         $result = $appliedJobs->map(function ($appliedJob) {
-            // Fetch the CV including its related seekerSkills
+            // Fetch the CV including its related seekerSkills, job experiences, and educations
             $curriculumVitae = $appliedJob->curriculumVitae;
-            $seekerSkills = $curriculumVitae ? $curriculumVitae->seekerSkills()->with('skill')->get() : [];
-
-            // Extract skill names from seekerSkills
-            $skills = $seekerSkills->map(function ($seekerSkill) {
+            $seekerSkills = $curriculumVitae ? $curriculumVitae->seekerSkills->map(function ($seekerSkill) {
                 return $seekerSkill->skill ? $seekerSkill->skill->name : null;
-            })->filter()->values();
+            })->filter()->values() : [];
 
             return [
-                'applied_job_id' => $appliedJob->id,  // Include the applied job ID for reference
+                'applied_job_id' => $appliedJob->id,
                 'cv' => $curriculumVitae,
-                'skills' => $skills,  // Include the skill names here
+                'skills' => $seekerSkills, // Include the skill names here
+                'job_experiences' => $curriculumVitae ? $curriculumVitae->jobExperiences : [],
+                'educations' => $curriculumVitae ? $curriculumVitae->educations : [],
                 'cover_letter' => $appliedJob->coverLetter,
                 'seeker' => $appliedJob->seeker,
                 'status' => $appliedJob->status,
@@ -74,6 +75,7 @@ class manageApplicationsController extends Controller
         // Return the detailed response
         return response()->json($result);
     }
+
 
     public function accept(Request $request)
     {
@@ -143,6 +145,84 @@ class manageApplicationsController extends Controller
         $appliedJob->save();
 
         return response()->json(['message' => 'Job application rejected']);
+    }
+
+    /**
+     * Move the job application to the next step.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function moveToNextStep(Request $request)
+    {
+        // Ensure the provider is authenticated
+        $provider = Auth::guard('sanctum')->user();
+        if (!$provider) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        // Validate the input
+        $validated = $request->validate([
+            'applied_job_id' => 'required|integer|exists:applied_jobs,id',
+        ]);
+
+        $appliedJobId = $validated['applied_job_id'];
+
+        // Find the applied job by ID
+        $appliedJob = AppliedJob::find($appliedJobId);
+
+        if (!$appliedJob) {
+            return response()->json(['error' => 'Applied job not found'], 404);
+        }
+
+        if ($appliedJob->jobPosting && $appliedJob->jobPosting->provider_id !== $provider->id) {
+            return response()->json(['error' => 'Unauthorized to update this application'], 403);
+        }
+
+        // Update the status to 'next_step'
+        $appliedJob->status = 'next_step';
+        $appliedJob->save();
+
+        return response()->json(['message' => 'Job application moved to the next step']);
+    }
+
+    /**
+     * Move the job application to the final step.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function moveToFinalStep(Request $request)
+    {
+        // Ensure the provider is authenticated
+        $provider = Auth::guard('sanctum')->user();
+        if (!$provider) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        // Validate the input
+        $validated = $request->validate([
+            'applied_job_id' => 'required|integer|exists:applied_jobs,id',
+        ]);
+
+        $appliedJobId = $validated['applied_job_id'];
+
+        // Find the applied job by ID
+        $appliedJob = AppliedJob::find($appliedJobId);
+
+        if (!$appliedJob) {
+            return response()->json(['error' => 'Applied job not found'], 404);
+        }
+
+        if ($appliedJob->jobPosting && $appliedJob->jobPosting->provider_id !== $provider->id) {
+            return response()->json(['error' => 'Unauthorized to update this application'], 403);
+        }
+
+        // Update the status to 'final_step'
+        $appliedJob->status = 'final_step';
+        $appliedJob->save();
+
+        return response()->json(['message' => 'Job application moved to the final step']);
     }
 
 

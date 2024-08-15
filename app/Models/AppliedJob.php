@@ -40,7 +40,7 @@ class AppliedJob extends Model
     // Accessor for status attribute
     public function setStatusAttribute($value)
     {
-        $validStatuses = ['accepted', 'hold', 'rejected'];
+        $validStatuses = ['accepted', 'hold', 'rejected','next_step','final_step'];
 
         if (!in_array($value, $validStatuses)) {
             throw new \InvalidArgumentException("Invalid status value.");

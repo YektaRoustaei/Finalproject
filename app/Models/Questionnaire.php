@@ -21,4 +21,8 @@ class Questionnaire extends Model
     {
         return $this->belongsTo(JobPosting::class, 'job_id');
     }
+    public function answers()
+    {
+        return $this->hasMany(Answers::class, 'question_id');
+    }
 }

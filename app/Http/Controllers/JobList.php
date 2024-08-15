@@ -55,4 +55,5 @@ class JobList extends Controller
             return response()->json(['error' => 'Unable to fetch job details.'], 500);
         }
     }
+
 }

@@ -46,4 +46,8 @@ class Seeker extends Authenticatable
     {
         return $this->belongsTo(City::class);
     }
+    public function answers()
+    {
+        return $this->hasMany(Answers::class);
+    }
 }

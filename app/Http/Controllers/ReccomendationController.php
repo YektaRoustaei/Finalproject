@@ -92,13 +92,32 @@ class ReccomendationController extends Controller
             ];
         })->filter(); // Remove null values
 
+        // Separate jobs with matching skills and other jobs
+        $jobsWithMatchingSkills = $jobsWithDistance->filter(function ($item) {
+            return $item['matchingSkillsCount'] > 0;
+        });
+
+        $jobsWithoutMatchingSkills = $jobsWithDistance->filter(function ($item) {
+            return $item['matchingSkillsCount'] == 0;
+        });
+
         // Sort jobs primarily by whether they are in the seeker's city, then by distance
-        $sortedJobs = $jobsWithDistance->sort(function ($a, $b) {
+        $sortedJobsWithMatchingSkills = $jobsWithMatchingSkills->sort(function ($a, $b) {
             if ($a['isInSeekerCity'] == $b['isInSeekerCity']) {
                 return $a['distance'] - $b['distance'];
             }
             return $b['isInSeekerCity'] - $a['isInSeekerCity'];
         })->values(); // Reset array keys
+
+        $sortedJobsWithoutMatchingSkills = $jobsWithoutMatchingSkills->sort(function ($a, $b) {
+            if ($a['isInSeekerCity'] == $b['isInSeekerCity']) {
+                return $a['distance'] - $b['distance'];
+            }
+            return $b['isInSeekerCity'] - $a['isInSeekerCity'];
+        })->values(); // Reset array keys
+
+        // Combine the results
+        $sortedJobs = $sortedJobsWithMatchingSkills->merge($sortedJobsWithoutMatchingSkills);
 
         // Prepare the response with matched skills, job skills, and company name
         $response = $sortedJobs->map(function ($item) {

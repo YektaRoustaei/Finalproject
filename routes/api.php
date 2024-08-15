@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AnswersController;
 use App\Http\Controllers\ApplyJobController;
 use App\Http\Controllers\Auth\ProviderAuthController;
 use App\Http\Controllers\Auth\SeekerAuthController;
@@ -10,6 +11,7 @@ use App\Http\Controllers\CreateJobController;
 use App\Http\Controllers\JobSkillsController;
 use App\Http\Controllers\QuestionnaireController;
 use App\Http\Controllers\ReccomendationController;
+use App\Http\Controllers\SaveCvController;
 use App\Http\Controllers\SeekerAlertController;
 use App\Http\Controllers\SaveJobController;
 use App\Http\Controllers\SkillsController;
@@ -58,6 +60,8 @@ Route::prefix('provider')->group(function () {
         Route::get('applications', [manageApplicationsController::class, 'showAppliedJobs']);
         Route::post('/applications/accept', [manageApplicationsController::class, 'accept']);
         Route::post('/applications/reject', [manageApplicationsController::class, 'reject']);
+        Route::post('/applications/next', [manageApplicationsController::class, 'moveToNextStep']);
+        Route::post('/applications/final', [manageApplicationsController::class, 'moveToFinalStep']);
         Route::post('/question/create', [QuestionnaireController::class, 'store']);
         Route::delete('/question/remove', [QuestionnaireController::class, 'destroy']);
 
@@ -128,12 +132,24 @@ Route::get('joblist',[JobList::class,'jobList']);
 Route::get('job/{id}', [JobList::class, 'show']);
 
 
+Route::get('questions/{id}', [QuestionnaireController::class, 'showQuestionsByJobId']);
+Route::post('answers/{id}',[AnswersController::class,'store']);
+Route::get('getanswers/{job_id}/{seeker_id}', [AnswersController::class, 'getAnswers']);
+
+
+
+
 Route::get('companyList',[CompanyListController::class,'companyList']);
 Route::get('categories',[CategoryListController::class,'categoryList']);
 Route::get('skills', [SkillsController::class, 'allSkills']);
 Route::post('skills', [SkillsController::class, 'store']);
 Route::get('jobskills', [JobSkillsController::class, 'jobskills']);
 Route::get('cities', [CityListController::class, 'cities']);
+
+
+Route::post('cv/save',[SaveCvController::class,'save']);
+Route::post('cv/unsave',[SaveCvController::class,'unsave']);
+Route::get('savedcv/list/{id}',[SaveCvController::class,'getAllByProvider']);
 
 
 
