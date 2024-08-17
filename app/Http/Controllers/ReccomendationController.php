@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\CurriculumVitae;
 use App\Models\JobPosting;
+use App\Models\City;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -29,7 +29,7 @@ class ReccomendationController extends Controller
         // Get the skills from the curriculum vitae
         $skills = $curriculumVitae->seekerSkills->pluck('skill.name')->toArray();
 
-        // Get the seeker city
+        // Get the seeker city details
         $seekerCity = $seeker->city;
         if (!$seekerCity) {
             return response()->json(['error' => 'Seeker city not found.'], 404);
@@ -37,7 +37,10 @@ class ReccomendationController extends Controller
 
         // Retrieve search parameters
         $searchTerm = trim($request->input('search_term'));
-        $city = trim($request->input('city'));
+        $cityName = trim($request->input('city'));
+
+        // Get city details if cityName is provided
+        $cityDetails = $this->getCityDetails($cityName);
 
         // Query job postings with search functionality
         $jobsQuery = JobPosting::query()
@@ -54,74 +57,68 @@ class ReccomendationController extends Controller
                     ->orWhereHas('jobSkills.skill', function ($query) use ($searchTerm) {
                         $query->where('name', 'like', '%' . $searchTerm . '%');
                     });
-            })
-            ->when($city, function ($query, $city) {
-                $query->whereHas('provider.city', function ($query) use ($city) {
-                    $query->where('city_name', 'like', '%' . $city . '%');
-                });
             });
 
         $jobs = $jobsQuery->get();
 
-        // Calculate distances and filter jobs based on skills
-        $jobsWithDistance = $jobs->map(function ($job) use ($skills, $seekerCity) {
-            $jobSkills = $job->jobSkills->pluck('skill.name')->toArray();
-            $matchingSkills = array_intersect($skills, $jobSkills);
-            $matchingSkillsCount = count($matchingSkills);
-            $job->matchingSkills = $matchingSkills; // Store matched skills in the job object
-
-            // Get job provider city
+        // Calculate distances and sort jobs based on distance from input city or seeker city
+        $jobsWithDetails = $jobs->map(function ($job) use ($cityDetails, $seekerCity, $skills) {
             $jobCity = $job->provider->city;
             if (!$jobCity) {
                 Log::warning('Job City not found for job ID ' . $job->id);
                 return null;
             }
 
-            // Calculate the distance
-            $distance = $this->calculateDistance(
+            // Calculate the distance from the input city
+            $distanceFromInputCity = $cityDetails
+                ? $this->calculateDistance(
+                    $cityDetails['latitude'], $cityDetails['longitude'],
+                    $jobCity->latitude, $jobCity->longitude
+                )
+                : null;
+
+            // Calculate the distance from the seeker's city
+            $distanceFromSeekerCity = $this->calculateDistance(
                 $seekerCity->latitude, $seekerCity->longitude,
                 $jobCity->latitude, $jobCity->longitude
             );
-            $job->distance = $distance; // Store distance in the job object
 
-            return [
-                'job' => $job,
-                'matchingSkillsCount' => $matchingSkillsCount,
-                'distance' => $distance,
-                'isInSeekerCity' => $jobCity->city_name == $seekerCity->city_name
-            ];
+            // Get job skills
+            $jobSkills = $job->jobSkills->pluck('skill.name')->toArray();
+
+            // Calculate matching skills
+            $matchingSkills = array_intersect($skills, $jobSkills);
+            $matchingSkillsCount = count($matchingSkills);
+
+            // Attach details to job
+            $job->distance_from_input_city = $distanceFromInputCity; // Distance from input city
+            $job->distance_from_seeker_city = $distanceFromSeekerCity; // Distance from seeker city
+            $job->matching_skills = $matchingSkills; // Matching skills
+            $job->matching_skills_count = $matchingSkillsCount; // Count of matching skills
+
+            return $job;
         })->filter(); // Remove null values
 
-        // Separate jobs with matching skills and other jobs
-        $jobsWithMatchingSkills = $jobsWithDistance->filter(function ($item) {
-            return $item['matchingSkillsCount'] > 0;
-        });
+        // Determine sorting logic based on whether city input is provided
+        if ($cityDetails) {
+            // Sort jobs by distance from the input city
+            $sortedJobs = $jobsWithDetails->sortBy('distance_from_input_city')->values();
+        } else {
+            // Sort jobs by matching skills count (descending) and then by distance from seeker's city
+            $sortedJobs = $jobsWithDetails->sort(function ($a, $b) {
+                // First sort by matching skills count (descending)
+                $matchingSkillsComparison = $b->matching_skills_count - $a->matching_skills_count;
+                if ($matchingSkillsComparison !== 0) {
+                    return $matchingSkillsComparison;
+                }
 
-        $jobsWithoutMatchingSkills = $jobsWithDistance->filter(function ($item) {
-            return $item['matchingSkillsCount'] == 0;
-        });
+                // If matching skills count is the same, sort by distance from seeker city
+                return $a->distance_from_seeker_city - $b->distance_from_seeker_city;
+            })->values(); // Reset array keys
+        }
 
-        // Sort jobs primarily by whether they are in the seeker's city, then by distance
-        $sortedJobsWithMatchingSkills = $jobsWithMatchingSkills->sort(function ($a, $b) {
-            if ($a['isInSeekerCity'] == $b['isInSeekerCity']) {
-                return $a['distance'] - $b['distance'];
-            }
-            return $b['isInSeekerCity'] - $a['isInSeekerCity'];
-        })->values(); // Reset array keys
-
-        $sortedJobsWithoutMatchingSkills = $jobsWithoutMatchingSkills->sort(function ($a, $b) {
-            if ($a['isInSeekerCity'] == $b['isInSeekerCity']) {
-                return $a['distance'] - $b['distance'];
-            }
-            return $b['isInSeekerCity'] - $a['isInSeekerCity'];
-        })->values(); // Reset array keys
-
-        // Combine the results
-        $sortedJobs = $sortedJobsWithMatchingSkills->merge($sortedJobsWithoutMatchingSkills);
-
-        // Prepare the response with matched skills, job skills, and company name
-        $response = $sortedJobs->map(function ($item) {
-            $job = $item['job'];
+        // Prepare the response with job details
+        $response = $sortedJobs->map(function ($job) {
             return [
                 'id' => $job->id,
                 'title' => $job->title,
@@ -131,14 +128,41 @@ class ReccomendationController extends Controller
                 'provider_city' => $job->provider->city->city_name ?? 'Unknown',
                 'provider_name' => $job->provider->company_name,
                 'job_skills' => $job->jobSkills->pluck('skill.name')->toArray(),
-                'matching_skills' => $job->matchingSkills ?? [],
-                'distance' => $item['distance'],
+                'matching_skills' => $job->matching_skills ?? [],
+                'matching_skills_count' => $job->matching_skills_count ?? 0,
+                'distance_from_input_city' => $job->distance_from_input_city,
+                'distance_from_seeker_city' => $job->distance_from_seeker_city,
             ];
         });
 
         return response()->json([
             'jobs' => $response
         ]);
+    }
+
+    /**
+     * Fetch city details based on city name.
+     *
+     * @param string|null $cityName
+     * @return array|null
+     */
+    protected function getCityDetails(?string $cityName): ?array
+    {
+        if (!$cityName) {
+            return null;
+        }
+
+        $city = City::where('city_name', 'like', '%' . $cityName . '%')->first();
+
+        if ($city) {
+            return [
+                'city_name' => $city->city_name,
+                'latitude' => $city->latitude,
+                'longitude' => $city->longitude,
+            ];
+        }
+
+        return null;
     }
 
     /**
