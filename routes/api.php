@@ -9,6 +9,7 @@ use App\Http\Controllers\CityListController;
 use App\Http\Controllers\CoverLetterController;
 use App\Http\Controllers\CreateJobController;
 use App\Http\Controllers\JobSkillsController;
+use App\Http\Controllers\JobStatus;
 use App\Http\Controllers\QuestionnaireController;
 use App\Http\Controllers\ReccomendationController;
 use App\Http\Controllers\SaveCvController;
@@ -54,6 +55,9 @@ Route::prefix('provider')->group(function () {
     Route::post('logout', [ProviderAuthController::class, 'logout'])->middleware([EnsureUserIsProvider::class]);
     Route::get('get-info', ProviderInfo::class)->middleware([EnsureUserIsProvider::class]);
     Route::get('all', [ProviderInfo::class, 'getAllProviders']);
+    Route::delete('delete/{id}', [ProviderAuthController::class,'delete']);
+    Route::put('edit/{id}', [ProviderAuthController::class,'update']);
+
 
     Route::middleware([EnsureUserIsProvider::class])->prefix('jobs')->group(function () {
         Route::post('create', [CreateJobController::class, 'store'])->middleware([PrepareCreatingJobProcess::class]);
@@ -145,6 +149,10 @@ Route::get('skills', [SkillsController::class, 'allSkills']);
 Route::post('skills', [SkillsController::class, 'store']);
 Route::get('jobskills', [JobSkillsController::class, 'jobskills']);
 Route::get('cities', [CityListController::class, 'cities']);
+Route::get('city/static', [CityListController::class, 'cityStatistics']);
+Route::get('city/static/provider', [CityListController::class, 'cityProviderCounts']);
+
+
 
 
 Route::post('cv/save',[SaveCvController::class,'save']);
@@ -160,6 +168,7 @@ Route::get('seekeralert',[SeekerAlertController::class,'jobRecommend']);
 
 Route::get('search', [JobSearchController::class,'search']);
 
+Route::get('/job-status/{jobId}', [JobStatus::class,'getJobStatus']);
 
 
 Route::middleware('auth:sanctum')->get('/provider', [ProviderInfo::class, 'getProvider']);

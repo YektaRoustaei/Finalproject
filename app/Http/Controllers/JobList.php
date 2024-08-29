@@ -13,8 +13,8 @@ class JobList extends Controller
         try {
             $searchTerm = $request->input('search_term');
 
-            // Initialize the query builder
-            $query = JobPosting::with(['provider']);
+            // Initialize the query builder and include the provider and city relationships
+            $query = JobPosting::with(['provider.city']);
 
             if ($searchTerm) {
                 $query->where(function($q) use ($searchTerm) {
@@ -42,8 +42,8 @@ class JobList extends Controller
     public function show($id)
     {
         try {
-            // Include 'provider' relationship here
-            $job = JobPosting::with(['provider'])
+            // Include 'provider' and 'city' relationship here
+            $job = JobPosting::with(['provider.city'])
                 ->findOrFail($id);
 
             return response()->json($job);
@@ -55,5 +55,4 @@ class JobList extends Controller
             return response()->json(['error' => 'Unable to fetch job details.'], 500);
         }
     }
-
 }

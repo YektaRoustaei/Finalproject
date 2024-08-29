@@ -32,16 +32,16 @@ class AuthTest extends TestCase
         $response = $this->postJson('api/provider/register', $data);
 
         $response->assertStatus(200)
-                 ->assertJsonStructure([
-                     'id',
-                     'company_name',
-                     'description',
-                     'address',
-                     'telephone',
-                     'email',
-                     'created_at',
-                     'updated_at'
-                 ]);
+            ->assertJsonStructure([
+                'id',
+                'company_name',
+                'description',
+                'address',
+                'telephone',
+                'email',
+                'created_at',
+                'updated_at'
+            ]);
 
         $this->assertDatabaseHas('providers', [
             'email' => 'test@example.com',
@@ -60,15 +60,15 @@ class AuthTest extends TestCase
 
 
         $response->assertStatus(422)
-                 ->assertJsonStructure([
-                     'errors' => [
-                         '*' => [
-                             'field',
-                             'message'
-                         ]
-                     ]
-                 ]);    
-        $this->assertCount(6, $response['errors']);         
+            ->assertJsonStructure([
+                'errors' => [
+                    '*' => [
+                        'field',
+                        'message'
+                    ]
+                ]
+            ]);
+        $this->assertCount(6, $response['errors']);
     }
     public function test_providers_can_not_register_with_repeated_email()
     {
@@ -88,15 +88,15 @@ class AuthTest extends TestCase
         $response = $this->postJson('api/provider/register', $data);
 
         $response->assertStatus(422)
-                 ->assertJsonStructure([
-                     'errors' => [
-                         '*' => [
-                             'field',
-                             'message'
-                         ]
-                     ]
-                 ]);    
-        $this->assertCount(1, $response['errors']);         
+            ->assertJsonStructure([
+                'errors' => [
+                    '*' => [
+                        'field',
+                        'message'
+                    ]
+                ]
+            ]);
+        $this->assertCount(1, $response['errors']);
     }
 
     public function test_provider_can_login_successfully()
@@ -113,12 +113,12 @@ class AuthTest extends TestCase
         $response = $this->postJson('api/provider/login', $data);
 
         $response->assertStatus(200)
-                 ->assertJsonStructure([
-                     'access_token',
-                     'token_type'
-                 ]);
+            ->assertJsonStructure([
+                'access_token',
+                'token_type'
+            ]);
     }
-    
+
     public function test_provider_can_login_unsuccessfully()
     {
         // create a provider
@@ -132,12 +132,12 @@ class AuthTest extends TestCase
 
         $response = $this->postJson('api/provider/login', $data);
         $response->assertStatus(422)
-                 ->assertJsonStructure([
-                     'message',
-                     'errors' => [
-                         'email'
-                     ]
-                 ]);
+            ->assertJsonStructure([
+                'message',
+                'errors' => [
+                    'email'
+                ]
+            ]);
     }
 
     public function test_provider_can_login_unsuccessfully_missing_data()
@@ -150,7 +150,7 @@ class AuthTest extends TestCase
 
         $response = $this->postJson('api/provider/login', $data);
         $response->assertStatus(422);
-        $this->assertCount(2, $response['errors']);         
+        $this->assertCount(2, $response['errors']);
     }
 
     public function test_provider_can_logout_successfully()
@@ -171,7 +171,7 @@ class AuthTest extends TestCase
         $response = $this->postJson('api/provider/logout');
 
         $response->assertStatus(401)
-                 ->assertJson(['error' => 'Unauthorized']);
+            ->assertJson(['error' => 'Unauthorized']);
     }
     public function test_middleware_rejects_non_provider_user()
     {
@@ -196,18 +196,18 @@ class AuthTest extends TestCase
         $newSeeker = Seeker::factory()->make()->toArray();
         $response = $this->postJson('api/seeker/register', $newSeeker);
         $response->assertStatus(200)
-                 ->assertJsonStructure([
-                     'id',
-                     'first_name',
-                     'last_name',
-                     'email',
-                     'address',
-                     'phonenumber',
-                     'created_at',
-                     'updated_at'
-                 ]);
+            ->assertJsonStructure([
+                'id',
+                'first_name',
+                'last_name',
+                'email',
+                'address',
+                'phonenumber',
+                'created_at',
+                'updated_at'
+            ]);
 
-        $this->assertDatabaseCount('seekers', 1);            
+        $this->assertDatabaseCount('seekers', 1);
     }
 
     public function test_registration_fails_with_invalid_data()
@@ -279,11 +279,11 @@ class AuthTest extends TestCase
         $response = $this->postJson('api/seeker/login', $data);
 
         $response->assertStatus(422)
-                 ->assertJsonStructure([
-                     'errors' => [
-                         'email' => []
-                     ],
-                 ]);
+            ->assertJsonStructure([
+                'errors' => [
+                    'email' => []
+                ],
+            ]);
     }
     public function test_middleware_allows_valid_request_seeker_login()
     {
@@ -388,6 +388,6 @@ class AuthTest extends TestCase
     {
         $response = $this->postJson('api/seeker/logout');
         $response->assertStatus(401)
-                 ->assertJson(['error' => 'Unauthorized']);
+            ->assertJson(['error' => 'Unauthorized']);
     }
 }

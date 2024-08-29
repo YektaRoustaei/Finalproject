@@ -26,6 +26,20 @@ class City extends Model
         return $this->hasMany(Provider::class);
     }
 
+    public function jobPostings()
+    {
+        return $this->hasManyThrough(JobPosting::class, Provider::class, 'city_id', 'provider_id');
+    }
+
+    public function appliedJobs()
+    {
+        return $this->hasManyThrough(AppliedJob::class, Seeker::class, 'city_id', 'seeker_id');
+    }
+    public function providers()
+    {
+        return $this->hasMany(Provider::class);
+    }
+
 
 
 }

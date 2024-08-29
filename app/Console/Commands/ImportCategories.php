@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use App\Models\Category;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class ImportCategories extends Command
 {
@@ -43,16 +44,34 @@ class ImportCategories extends Command
         $batchSize = 100; // Adjust as needed
         $chunks = array_chunk($occupations, $batchSize);
 
+        // Collect all titles to check for existing records
+        $existingTitles = Category::pluck('title')->toArray();
+        $existingTitlesSet = array_flip($existingTitles); // Faster lookup
+
+        $importedCount = 0;
+        $skippedCount = 0;
+
         foreach ($chunks as $chunk) {
             $categories = [];
+
             foreach ($chunk as $occupation) {
-                // You might want to add more validation or sanitization here
-                $categories[] = ['title' => $occupation];
+                // Check if the occupation already exists in the set
+                if (!isset($existingTitlesSet[$occupation])) {
+                    $categories[] = ['title' => $occupation];
+                    $importedCount++;
+                    $existingTitlesSet[$occupation] = true; // Add to the set
+                } else {
+                    $skippedCount++;
+                }
             }
-            Category::insert($categories);
+
+            // Insert new categories in chunks
+            if (count($categories) > 0) {
+                Category::insert($categories);
+            }
         }
 
-        $this->info('Categories imported successfully.');
+        $this->info("Categories imported successfully. Imported: $importedCount, Skipped: $skippedCount.");
         return 0;
     }
 }

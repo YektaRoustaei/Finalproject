@@ -58,9 +58,8 @@ class SaveCvController extends Controller
         ], 404);
     }
 
-
     /**
-     * Get all saved CVs based on provider_id.
+     * Get all saved CVs based on provider_id with detailed curriculum vitae information.
      *
      * @param int $provider_id
      * @return \Illuminate\Http\JsonResponse
@@ -76,12 +75,36 @@ class SaveCvController extends Controller
             ], 404);
         }
 
-        // Fetch all records matching the provider_id
-        $futures = Future::where('provider_id', $provider_id)->get();
+        // Fetch all records matching the provider_id with curriculum vitae details
+        $futures = Future::with([
+            'curriculumVitae.seeker',
+            'curriculumVitae.seekerSkills.skill', // Load related skills
+            'curriculumVitae.educations',
+            'curriculumVitae.jobExperiences'
+        ])
+            ->where('provider_id', $provider_id)
+            ->get();
+
+        // Format the response to include skill names
+        $response = $futures->map(function ($future) {
+            $cv = $future->curriculumVitae;
+
+            $skills = $cv->seekerSkills->map(function ($seekerSkill) {
+                return $seekerSkill->skill->name;
+            });
+
+            return [
+                'curriculum_vitae_id' => $cv->id,
+                'seeker' => $cv->seeker,
+                'skills' => $skills,
+                'educations' => $cv->educations,
+                'job_experiences' => $cv->jobExperiences,
+            ];
+        });
 
         return response()->json([
             'message' => 'Fetched all saved CVs successfully!',
-            'data' => $futures
+            'data' => $response
         ], 200);
     }
 }

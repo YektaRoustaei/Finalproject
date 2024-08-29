@@ -50,4 +50,40 @@ class ProviderAuthController extends Controller
         auth('sanctum')->user()->tokens()->delete();
         return response()->json('Logged out successfully', 200);
     }
+
+    public function update(Request $request, $id)
+    {
+        $validatedData = $request->validate([
+            'company_name' => 'required|string|max:255',
+            'description' => 'required|string',
+            'telephone' => 'required|string',
+            'email' => 'required|email',
+            'address' => 'required|string',
+        ]);
+
+        try {
+            // Find the provider by ID
+            $provider = Provider::findOrFail($id);
+
+            // Update provider details
+            $provider->update($validatedData);
+
+            return response()->json($provider, 200);
+        } catch (\Exception $e) {
+            Log::error('Provider update failed: ' . $e->getMessage());
+            return response()->json(['error' => 'Update failed'], 500);
+        }
+    }
+
+    public function delete($id)
+    {
+        try {
+            $provider = Provider::findOrFail($id);
+            $provider->delete();
+            return response()->json(['message' => 'Provider deleted successfully'], 200);
+        } catch (Exception $e) {
+            Log::error('Provider deletion failed: ' . $e->getMessage());
+            return response()->json(['error' => 'Deletion failed'], 500);
+        }
+    }
 }

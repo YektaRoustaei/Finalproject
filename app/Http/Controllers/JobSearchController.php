@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use App\Models\JobPosting;
 use App\Models\City;
+use App\Models\Synonym;
 
 class JobSearchController extends Controller
 {
@@ -21,21 +22,48 @@ class JobSearchController extends Controller
         $cityName = trim($request->input('city'));
         $jobType = trim($request->input('job_type'));
 
-        // Fetch city details if cityName is provided
         $cityDetails = $this->getCityDetails($cityName);
+        $synonyms = $this->getSynonyms($searchTerm);
 
-        // Perform the search
-        $results = $this->searchJobs($searchTerm, $cityDetails, $jobType);
+        $results = $this->searchJobs($searchTerm, $synonyms, $cityDetails, $jobType);
 
-        // If no results found and both searchTerm and city are provided, perform an alternative search
         if ($cityName && $searchTerm && $results->isEmpty()) {
-            $results = $this->searchJobs($searchTerm, null, $jobType);
+            $results = $this->searchJobs($searchTerm, null, $cityDetails, $jobType);
         }
 
-        // Ensure results are in array format
+        // Paginate the results
+        $perPage = 10;
+        $currentPage = $request->input('page', 1);
+        $paginatedJobs = $results->forPage($currentPage, $perPage);
+
+        $paginator = new \Illuminate\Pagination\LengthAwarePaginator(
+            $paginatedJobs,
+            $results->count(),
+            $perPage,
+            $currentPage,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+
         $response = [
-            'jobs' => $results->values(), // Convert to array
-            'city' => $cityDetails,
+            'jobs' => $paginator->map(function ($job) {
+                return [
+                    'id' => $job->id,
+                    'title' => $job->title,
+                    'salary' => $job->salary,
+                    'type' => $job->type,
+                    'description' => $job->description,
+                    'provider_city' => $job->provider->city->city_name ?? 'Unknown',
+                    'provider_name' => $job->provider->company_name,
+                    'job_skills' => $job->jobSkills->pluck('skill.name')->toArray(),
+                    'matching_skills' => $job->matching_skills ?? [],
+                    'matching_skills_count' => $job->matching_skills_count ?? 0,
+                    'distance_from_input_city' => $job->distance_from_input_city,
+                    'distance_from_seeker_city' => $job->distance_from_seeker_city,
+                ];
+            }),
+            'current_page' => $paginator->currentPage(),
+            'total_pages' => $paginator->lastPage(),
+            'total_jobs' => $paginator->total(),
         ];
 
         return response()->json($response);
@@ -60,78 +88,70 @@ class JobSearchController extends Controller
         return null;
     }
 
-    protected function searchJobs(?string $searchTerm, ?array $cityDetails, ?string $jobType)
+    protected function getSynonyms(string $searchTerm): array
     {
-        $jobs = JobPosting::query()
+        // Fetch synonyms for the search term
+        $synonyms = Synonym::where('title', $searchTerm)
+            ->first();
+
+        if ($synonyms) {
+            return [
+                $synonyms->title,
+                $synonyms->synonym1,
+                $synonyms->synonym2,
+                $synonyms->synonym3,
+                $synonyms->synonym4,
+                $synonyms->synonym5,
+            ];
+        }
+
+        // Return an empty array if no synonyms found
+        return [];
+    }
+
+    protected function searchJobs(string $searchTerm, ?array $synonyms, ?array $cityDetails, ?string $jobType)
+    {
+        $jobsQuery = JobPosting::query()
             ->with(['provider.city', 'categories', 'jobskills.skill'])
-            ->when($searchTerm, function ($query, $searchTerm) {
-                $query->where('title', 'like', '%' . $searchTerm . '%')
-                    ->orWhere('description', 'like', '%' . $searchTerm . '%')
-                    ->orWhereHas('provider', function ($query) use ($searchTerm) {
-                        $query->where('company_name', 'like', '%' . $searchTerm . '%')
-                            ->orWhereHas('city', function ($query) use ($searchTerm) {
-                                $query->where('city_name', 'like', '%' . $searchTerm . '%');
+            ->when($searchTerm || $synonyms, function ($query) use ($searchTerm, $synonyms) {
+                $searchTerms = [$searchTerm];
+
+                if ($synonyms) {
+                    $searchTerms = array_merge($searchTerms, array_filter($synonyms));
+                }
+
+                $query->where(function ($query) use ($searchTerms) {
+                    foreach ($searchTerms as $term) {
+                        $query->orWhere('title', 'like', '%' . $term . '%')
+                            ->orWhere('description', 'like', '%' . $term . '%')
+                            ->orWhereHas('provider', function ($query) use ($term) {
+                                $query->where('company_name', 'like', '%' . $term . '%')
+                                    ->orWhereHas('city', function ($query) use ($term) {
+                                        $query->where('city_name', 'like', '%' . $term . '%');
+                                    });
+                            })
+                            ->orWhereHas('categories', function ($query) use ($term) {
+                                $query->where('name', 'like', '%' . $term . '%');
+                            })
+                            ->orWhereHas('jobskills.skill', function ($query) use ($term) {
+                                $query->where('name', 'like', '%' . $term . '%');
                             });
-                    })
-                    ->orWhereHas('categories', function ($query) use ($searchTerm) {
-                        $query->where('name', 'like', '%' . $searchTerm . '%');
-                    })
-                    ->orWhereHas('jobskills.skill', function ($query) use ($searchTerm) {
-                        $query->where('name', 'like', '%' . $searchTerm . '%');
-                    });
+                    }
+                });
             })
             ->when($jobType, function ($query, $jobType) {
                 $query->where('type', 'like', '%' . $jobType . '%');
-            })
-            ->get();
+            });
 
-        // Calculate distance if city details are provided
-        if ($cityDetails) {
-            $latitude = $cityDetails['latitude'];
-            $longitude = $cityDetails['longitude'];
+        $jobs = $jobsQuery->get();
 
-            $jobs = $jobs->map(function ($job) use ($latitude, $longitude) {
-                $jobCity = $job->provider->city;
-
-                if ($jobCity) {
-                    $jobLatitude = $jobCity->latitude;
-                    $jobLongitude = $jobCity->longitude;
-
-                    // Calculate the distance
-                    $distance = $this->calculateDistance($latitude, $longitude, $jobLatitude, $jobLongitude);
-                    $job->distance = $distance;
-                } else {
-                    $job->distance = null;
-                }
-
-                return $job;
-            })->sortBy('distance');
+        // If needed, check if $jobs is null or empty
+        if ($jobs->isEmpty()) {
+            // Handle case where no jobs are found
+            $jobs = collect(); // Return an empty collection
         }
 
-        // Format the job results
-        return $jobs->map(function ($job) {
-            // Get categories
-            $categories = $job->categories->pluck('name')->toArray();
-
-            // Get skills
-            $skills = $job->jobskills->pluck('skill.name')->toArray();
-
-            return [
-                'id' => $job->id,
-                'title' => $job->title,
-                'description' => $job->description,
-                'salary' => $job->salary,
-                'type' => $job->type,
-                'provider_id' => $job->provider_id,
-                'provider_name' => $job->provider ? $job->provider->company_name : null,
-                'provider_city' => $job->provider && $job->provider->city ? $job->provider->city->city_name : null,
-                'categories' => $categories,
-                'skills' => $skills,
-                'distance' => $job->distance,
-                'created_at' => $job->created_at,
-                'updated_at' => $job->updated_at,
-            ];
-        });
+        return $jobs;
     }
 
     protected function calculateDistance(float $latitudeFrom, float $longitudeFrom, float $latitudeTo, float $longitudeTo): float

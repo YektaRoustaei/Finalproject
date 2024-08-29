@@ -33,4 +33,6 @@ class Provider extends Authenticatable
     {
         return $this->belongsTo(City::class);
     }
+
+
 }

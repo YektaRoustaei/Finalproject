@@ -19,30 +19,24 @@ class ReccomendationController extends Controller
 
         $curriculumVitae = $seeker->curriculumVitae()
             ->with('seekerSkills.skill')
-            ->latest() // This orders by created_at in descending order
-            ->first(); // Fetches the most recent one
+            ->latest()
+            ->first();
 
         if (!$curriculumVitae) {
             return response()->json(['error' => 'No Curriculum Vitae found.'], 404);
         }
 
-        // Get the skills from the curriculum vitae
         $skills = $curriculumVitae->seekerSkills->pluck('skill.name')->toArray();
-
-        // Get the seeker city details
         $seekerCity = $seeker->city;
         if (!$seekerCity) {
             return response()->json(['error' => 'Seeker city not found.'], 404);
         }
 
-        // Retrieve search parameters
         $searchTerm = trim($request->input('search_term'));
         $cityName = trim($request->input('city'));
 
-        // Get city details if cityName is provided
         $cityDetails = $this->getCityDetails($cityName);
 
-        // Query job postings with search functionality
         $jobsQuery = JobPosting::query()
             ->with(['jobSkills.skill', 'provider.city'])
             ->when($searchTerm, function ($query, $searchTerm) {
@@ -61,7 +55,6 @@ class ReccomendationController extends Controller
 
         $jobs = $jobsQuery->get();
 
-        // Calculate distances and sort jobs based on distance from input city or seeker city
         $jobsWithDetails = $jobs->map(function ($job) use ($cityDetails, $seekerCity, $skills) {
             $jobCity = $job->provider->city;
             if (!$jobCity) {
@@ -69,7 +62,6 @@ class ReccomendationController extends Controller
                 return null;
             }
 
-            // Calculate the distance from the input city
             $distanceFromInputCity = $cityDetails
                 ? $this->calculateDistance(
                     $cityDetails['latitude'], $cityDetails['longitude'],
@@ -77,48 +69,50 @@ class ReccomendationController extends Controller
                 )
                 : null;
 
-            // Calculate the distance from the seeker's city
             $distanceFromSeekerCity = $this->calculateDistance(
                 $seekerCity->latitude, $seekerCity->longitude,
                 $jobCity->latitude, $jobCity->longitude
             );
 
-            // Get job skills
             $jobSkills = $job->jobSkills->pluck('skill.name')->toArray();
-
-            // Calculate matching skills
             $matchingSkills = array_intersect($skills, $jobSkills);
             $matchingSkillsCount = count($matchingSkills);
 
-            // Attach details to job
-            $job->distance_from_input_city = $distanceFromInputCity; // Distance from input city
-            $job->distance_from_seeker_city = $distanceFromSeekerCity; // Distance from seeker city
-            $job->matching_skills = $matchingSkills; // Matching skills
-            $job->matching_skills_count = $matchingSkillsCount; // Count of matching skills
+            $job->distance_from_input_city = $distanceFromInputCity;
+            $job->distance_from_seeker_city = $distanceFromSeekerCity;
+            $job->matching_skills = $matchingSkills;
+            $job->matching_skills_count = $matchingSkillsCount;
 
             return $job;
-        })->filter(); // Remove null values
+        })->filter();
 
-        // Determine sorting logic based on whether city input is provided
         if ($cityDetails) {
-            // Sort jobs by distance from the input city
             $sortedJobs = $jobsWithDetails->sortBy('distance_from_input_city')->values();
         } else {
-            // Sort jobs by matching skills count (descending) and then by distance from seeker's city
             $sortedJobs = $jobsWithDetails->sort(function ($a, $b) {
-                // First sort by matching skills count (descending)
                 $matchingSkillsComparison = $b->matching_skills_count - $a->matching_skills_count;
                 if ($matchingSkillsComparison !== 0) {
                     return $matchingSkillsComparison;
                 }
-
-                // If matching skills count is the same, sort by distance from seeker city
                 return $a->distance_from_seeker_city - $b->distance_from_seeker_city;
-            })->values(); // Reset array keys
+            })->values();
         }
 
-        // Prepare the response with job details
-        $response = $sortedJobs->map(function ($job) {
+        // Paginate the sorted jobs
+        $perPage = 10;
+        $currentPage = $request->input('page', 1);
+        $paginatedJobs = $sortedJobs->forPage($currentPage, $perPage);
+
+        // Create a LengthAwarePaginator instance
+        $paginator = new \Illuminate\Pagination\LengthAwarePaginator(
+            $paginatedJobs,
+            $sortedJobs->count(),
+            $perPage,
+            $currentPage,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+
+        $response = $paginator->map(function ($job) {
             return [
                 'id' => $job->id,
                 'title' => $job->title,
@@ -136,7 +130,10 @@ class ReccomendationController extends Controller
         });
 
         return response()->json([
-            'jobs' => $response
+            'jobs' => $response,
+            'current_page' => $paginator->currentPage(),
+            'total_pages' => $paginator->lastPage(),
+            'total_jobs' => $paginator->total(),
         ]);
     }
 
