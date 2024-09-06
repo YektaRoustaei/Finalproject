@@ -24,17 +24,14 @@ class SeekerAlertController extends Controller
             'job_id' => 'required|exists:job_postings,id',
         ]);
 
-        // Check if the job alert already exists
         $jobAlert = JobAlert::where('job_id', $request->job_id)
             ->where('seeker_id', $seeker->id)
             ->first();
 
         if ($jobAlert) {
-            // Update existing job alert status
             $jobAlert->status = JobAlert::STATUS_NOT_INTERESTED;
             $jobAlert->save();
         } else {
-            // Create a new job alert
             JobAlert::create([
                 'job_id' => $request->job_id,
                 'seeker_id' => $seeker->id,
@@ -53,41 +50,34 @@ class SeekerAlertController extends Controller
             return response()->json(['error' => 'Unauthenticated.'], 401);
         }
 
-        // Fetch the most recent Curriculum Vitae
         $curriculumVitae = $seeker->curriculumVitae()
             ->with('seekerSkills.skill')
-            ->latest() // Orders by created_at in descending order
-            ->first(); // Fetches the most recent one
+            ->latest()
+            ->first();
 
         if (!$curriculumVitae) {
             return response()->json(['error' => 'No Curriculum Vitae found.'], 404);
         }
 
-        // Get the skills from the curriculum vitae
         $skills = $curriculumVitae->seekerSkills->pluck('skill.name')->toArray();
 
-        // Get the seeker city
         $seekerCity = $seeker->city;
         if (!$seekerCity) {
             return response()->json(['error' => 'Seeker city not found.'], 404);
         }
 
-        // Retrieve search parameters from the URL
         $searchTerm = trim($request->query('search_term')); // Use query method for URL parameters
         $city = trim($request->query('city'));
 
-        // Fetch applied jobs for the seeker
         $appliedJobIds = AppliedJob::where('seeker_id', $seeker->id)
             ->pluck('job_id')
             ->toArray();
 
-        // Fetch jobs marked as "Not Interested"
         $notInterestedJobIds = JobAlert::where('seeker_id', $seeker->id)
             ->where('status', JobAlert::STATUS_NOT_INTERESTED)
             ->pluck('job_id')
             ->toArray();
 
-        // Query job postings with search functionality
         $jobsQuery = JobPosting::query()
             ->with(['jobSkills.skill', 'provider.city'])
             ->whereNotIn('id', $appliedJobIds) // Exclude applied jobs
@@ -113,45 +103,39 @@ class SeekerAlertController extends Controller
 
         $jobs = $jobsQuery->get();
 
-        // Calculate distances and filter jobs based on skills
         $jobsWithDistance = $jobs->map(function ($job) use ($skills, $seekerCity) {
             $jobSkills = $job->jobSkills->pluck('skill.name')->toArray();
             $matchingSkills = array_intersect($skills, $jobSkills);
             $matchingSkillsCount = count($matchingSkills);
-            $job->matchingSkills = $matchingSkills; // Store matched skills in the job object
+            $job->matchingSkills = $matchingSkills;
 
-            // Get job provider city
             $jobCity = $job->provider->city;
             if (!$jobCity) {
                 Log::warning('Job City not found for job ID ' . $job->id);
                 return null;
             }
 
-            // Calculate the distance
             $distance = $this->calculateDistance(
                 $seekerCity->latitude, $seekerCity->longitude,
                 $jobCity->latitude, $jobCity->longitude
             );
             $job->distance = $distance; // Store distance in the job object
 
-            // Return only jobs with more than 2 matching skills
             return $matchingSkillsCount > 2 ? [
                 'job' => $job,
                 'matchingSkillsCount' => $matchingSkillsCount,
                 'distance' => $distance,
                 'isInSeekerCity' => $jobCity->city_name == $seekerCity->city_name
             ] : null;
-        })->filter(); // Remove null values
+        })->filter();
 
-        // Sort jobs primarily by whether they are in the seeker's city, then by distance
         $sortedJobs = $jobsWithDistance->sort(function ($a, $b) {
             if ($a['isInSeekerCity'] == $b['isInSeekerCity']) {
                 return $a['distance'] - $b['distance'];
             }
             return $b['isInSeekerCity'] - $a['isInSeekerCity'];
-        })->values(); // Reset array keys
+        })->values();
 
-        // Prepare the response with matched skills, job skills, and company name
         $response = $sortedJobs->map(function ($item) {
             $job = $item['job'];
             return [
@@ -184,19 +168,16 @@ class SeekerAlertController extends Controller
      */
     private function calculateDistance($lat1, $lon1, $lat2, $lon2)
     {
-        $earthRadius = 3959; // Radius of the Earth in miles
+        $earthRadius = 3959;
 
-        // Convert latitude and longitude from degrees to radians
         $lat1Rad = deg2rad($lat1);
         $lon1Rad = deg2rad($lon1);
         $lat2Rad = deg2rad($lat2);
         $lon2Rad = deg2rad($lon2);
 
-        // Calculate the differences
         $deltaLat = $lat2Rad - $lat1Rad;
         $deltaLon = $lon2Rad - $lon1Rad;
 
-        // Haversine formula
         $a = sin($deltaLat / 2) ** 2 + cos($lat1Rad) * cos($lat2Rad) * sin($deltaLon / 2) ** 2;
         $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
 

@@ -37,15 +37,5 @@ class AppliedJob extends Model
         return $this->belongsTo(CoverLetter::class); // Assuming you have a CoverLetter model
     }
 
-    // Accessor for status attribute
-    public function setStatusAttribute($value)
-    {
-        $validStatuses = ['accepted', 'hold', 'rejected','next_step','final_step'];
 
-        if (!in_array($value, $validStatuses)) {
-            throw new \InvalidArgumentException("Invalid status value.");
-        }
-
-        $this->attributes['status'] = $value;
-    }
 }

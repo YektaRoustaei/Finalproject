@@ -18,10 +18,8 @@ class SeekerInfo extends Controller
      */
     public function __invoke(): JsonResponse
     {
-        // Fetch the authenticated seeker with city relation
         $seeker = Auth::guard('sanctum')->user()->load('city');
 
-        // Fetch saved jobs, applied jobs, and CVs with related details
         $savedJobs = $seeker->savedJobs;
         $appliedJobs = $seeker->appliedJobs->map(function ($appliedJob) {
             return [
@@ -73,10 +71,8 @@ class SeekerInfo extends Controller
      */
     public function getAllSeekers(Request $request): JsonResponse
     {
-        // Start query builder for seekers
         $query = Seeker::with(['city', 'savedJobs', 'appliedJobs', 'curriculumVitae']);
 
-        // Apply search filter if 'search' parameter is present
         if ($request->has('search')) {
             $searchTerm = $request->input('search');
             $query->where(function($q) use ($searchTerm) {
@@ -86,7 +82,6 @@ class SeekerInfo extends Controller
             });
         }
 
-        // Execute query and get results
         $seekers = $query->get()->map(function ($seeker) {
             return [
                 'first_name' => $seeker->first_name,

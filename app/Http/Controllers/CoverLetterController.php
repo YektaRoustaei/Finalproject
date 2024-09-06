@@ -22,7 +22,6 @@ class CoverLetterController extends Controller
 
         $user = Auth::guard('sanctum')->user();
 
-        // Create a new CoverLetter
         $coverLetter = CoverLetter::create([
             'seeker_id' => $user->id,
             'content' => $request->input('content'),

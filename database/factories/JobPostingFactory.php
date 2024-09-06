@@ -19,6 +19,8 @@ class JobPostingFactory extends Factory
             'provider_id' => \App\Models\Provider::factory(),
             'salary' => $this->faker->numberBetween(1000, 9000),
             'type' => $this->faker->randomElement(['full-time', 'part-time', 'contract']),
+            'cover_letter' => $this->faker->boolean,
+            'question' => $this->faker->boolean,
         ];
     }
 }

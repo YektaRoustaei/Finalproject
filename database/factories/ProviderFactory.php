@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\Provider;
+use App\Models\City; // Import the City model
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 
@@ -15,13 +16,16 @@ class ProviderFactory extends Factory
 
     public function definition(): array
     {
+        // Create or get an existing city to use
+        $city = City::factory()->create();
+
         return [
             'company_name' => $this->faker->company,
             'description' => $this->faker->sentence,
-            'address' => $this->faker->address,
             'telephone' => $this->faker->phoneNumber,
             'email' => $this->faker->unique()->safeEmail,
             'password' => Hash::make('password123'),
-            ];
+            'city_id' => $city->id, // Add city_id field
+        ];
     }
 }

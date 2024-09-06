@@ -21,10 +21,8 @@ class ProviderInfo extends Controller
     {
         $provider = Auth::guard('sanctum')->user()->load('city');
 
-        // Get the number of job postings
         $jobCount = $provider->jobPostings()->count();
 
-        // Load job postings with job skills, skills, and categories
         $jobPostings = $provider->jobPostings()->with(['jobskills.skill', 'categories'])->get([
             'id',
             'title',
@@ -66,13 +64,10 @@ class ProviderInfo extends Controller
      */
     public function getAllProviders(Request $request): JsonResponse
     {
-        // Get the search term from the request
         $searchTerm = $request->input('search', '');
 
-        // Fetch providers with their related job postings, applying the search filter
         $providersQuery = Provider::with(['city', 'jobPostings.jobskills.skill', 'jobPostings.categories']);
 
-        // Apply search filter if search term is provided
         if (!empty($searchTerm)) {
             $providersQuery->where(function($query) use ($searchTerm) {
                 $query->where('company_name', 'like', "%{$searchTerm}%")
@@ -82,14 +77,11 @@ class ProviderInfo extends Controller
             });
         }
 
-        // Get the results
         $providers = $providersQuery->get();
 
         $providersData = $providers->map(function ($provider) {
-            // Get the job postings of this provider
             $jobPostings = $provider->jobPostings;
 
-            // Count of jobs for each status
             $jobStatuses = [
                 'hold' => 0,
                 'accepted' => 0,

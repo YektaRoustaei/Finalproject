@@ -15,10 +15,8 @@ class SeekerAuthController extends Controller
 {
     public function register(Request $request)
     {
-        // Validate the request data
 
         try {
-            // Create a new seeker
             $seeker = Seeker::create([
                 'first_name' => $request->first_name,
                 'last_name' => $request->last_name,
@@ -62,7 +60,6 @@ class SeekerAuthController extends Controller
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
-        // Validate the request data
         $validatedData = $request->validate([
             'first_name' => 'sometimes|string|max:255',
             'last_name' => 'sometimes|string|max:255',
@@ -73,18 +70,14 @@ class SeekerAuthController extends Controller
         ]);
 
         try {
-            // Log the validated data for debugging
             Log::info('Validated Data:', ['data' => $validatedData]);
 
-            // If a new password is set, hash it before updating
             if (isset($validatedData['password'])) {
                 $validatedData['password'] = Hash::make($validatedData['password']);
             }
 
-            // Update the seeker's details
             $user->update($validatedData);
 
-            // Return the updated user
             $user->load('city'); // If you want to include related models like city
 
             return response()->json($user, 200);
@@ -109,10 +102,8 @@ class SeekerAuthController extends Controller
         }
 
         try {
-            // Delete the seeker's account
             $user->delete();
 
-            // Log out the user by removing their tokens
             $user->tokens()->delete();
 
             return response()->json(['message' => 'Account deleted successfully'], 200);

@@ -13,7 +13,6 @@ class JobList extends Controller
         try {
             $searchTerm = $request->input('search_term');
 
-            // Initialize the query builder and include the provider and city relationships
             $query = JobPosting::with(['provider.city']);
 
             if ($searchTerm) {
@@ -29,7 +28,6 @@ class JobList extends Controller
                 });
             }
 
-            // Execute the query and get the results
             $jobs = $query->get();
 
             return response()->json($jobs);
@@ -42,7 +40,6 @@ class JobList extends Controller
     public function show($id)
     {
         try {
-            // Include 'provider' and 'city' relationship here
             $job = JobPosting::with(['provider.city'])
                 ->findOrFail($id);
 

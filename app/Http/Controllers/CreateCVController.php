@@ -14,7 +14,6 @@ class CreateCVController extends Controller
 {
     public function store(Request $request)
     {
-        // Validate incoming data
         $request->validate([
             'skills' => 'array|nullable',
             'skills.*.id' => 'nullable|integer|exists:skills,id',
@@ -35,12 +34,10 @@ class CreateCVController extends Controller
 
         $user = Auth::guard('sanctum')->user();
 
-        // Create CurriculumVitae for the Seeker
         $curriculumVitae = $user->curriculumVitae()->create([
             'seeker_id' => $user->id,
         ]);
 
-        // Save related skills
         if ($request->has('skills')) {
             foreach ($request->skills as $skillData) {
                 $skill = Skill::firstOrCreate(['name' => $skillData['name']]);
@@ -51,7 +48,6 @@ class CreateCVController extends Controller
             }
         }
 
-        // Save related educations
         if ($request->has('educations')) {
             foreach ($request->educations as $educationData) {
                 // Ensure end_date is null for ongoing education
@@ -60,16 +56,13 @@ class CreateCVController extends Controller
             }
         }
 
-        // Save related job experiences
         if ($request->has('job_experiences')) {
             foreach ($request->job_experiences as $jobExperienceData) {
-                // Ensure end_date is null for ongoing job experience
                 $jobExperienceData['end_date'] = $jobExperienceData['end_date'] ?: null;
                 $curriculumVitae->jobExperiences()->create($jobExperienceData);
             }
         }
 
-        // Return response
         return response()->json([
             'message' => 'Curriculum Vitae created',
             'curriculum_vitae' => $curriculumVitae->load(['seekerSkills', 'educations', 'jobExperiences']),
@@ -78,7 +71,6 @@ class CreateCVController extends Controller
 
     public function update(Request $request)
     {
-        // Validate incoming data
         $request->validate([
             'cv_id' => 'required|integer|exists:curriculum_vitaes,id',
             'skills' => 'array|nullable',
@@ -104,12 +96,10 @@ class CreateCVController extends Controller
         $cvId = $request->input('cv_id');
         $curriculumVitae = CurriculumVitae::findOrFail($cvId);
 
-        // Ensure the user owns the CurriculumVitae
         if ($curriculumVitae->seeker_id !== $user->id) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
-        // Update skills
         if ($request->has('skills')) {
             SeekerSkill::where('curriculum_vitae_id', $curriculumVitae->id)->delete();
             foreach ($request->skills as $skillData) {
@@ -121,7 +111,6 @@ class CreateCVController extends Controller
             }
         }
 
-        // Update educations
         if ($request->has('educations')) {
             foreach ($request->educations as $educationData) {
                 if (isset($educationData['id'])) {
@@ -137,7 +126,6 @@ class CreateCVController extends Controller
             }
         }
 
-        // Update job experiences
         if ($request->has('job_experiences')) {
             foreach ($request->job_experiences as $jobExperienceData) {
                 if (isset($jobExperienceData['id'])) {
@@ -153,7 +141,6 @@ class CreateCVController extends Controller
             }
         }
 
-        // Return response
         return response()->json([
             'message' => 'Curriculum Vitae updated',
             'curriculum_vitae' => $curriculumVitae->load(['seekerSkills', 'educations', 'jobExperiences']),
@@ -161,7 +148,6 @@ class CreateCVController extends Controller
     }
     public function remove(Request $request)
     {
-        // Validate that the request body contains the ID
         $request->validate([
             'id' => 'required|integer|exists:curriculum_vitaes,id',
         ]);
@@ -170,24 +156,18 @@ class CreateCVController extends Controller
         $curriculumVitae = CurriculumVitae::findOrFail($curriculumVitaeId);
         $user = Auth::guard('sanctum')->user();
 
-        // Ensure the user owns the CV
         if ($curriculumVitae->seeker_id !== $user->id) {
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
-        // Delete related skills
         SeekerSkill::where('curriculum_vitae_id', $curriculumVitae->id)->delete();
 
-        // Delete related educations
         $curriculumVitae->educations()->delete();
 
-        // Delete related job experiences
         $curriculumVitae->jobExperiences()->delete();
 
-        // Delete the CurriculumVitae
         $curriculumVitae->delete();
 
-        // Return response
         return response()->json([
             'message' => 'Curriculum Vitae removed',
         ], 200);
@@ -195,20 +175,16 @@ class CreateCVController extends Controller
 
     public function getCurriculumVitae()
     {
-        // Get the currently authenticated user
         $user = Auth::guard('sanctum')->user();
 
-        // Fetch the CurriculumVitae associated with the user
         $curriculumVitae = CurriculumVitae::where('seeker_id', $user->id)->first();
 
-        // If no CurriculumVitae is found, return a message
         if (!$curriculumVitae) {
             return response()->json([
                 'message' => 'No Curriculum Vitae found for this user.',
             ], 404);
         }
 
-        // Return JSON response including the CurriculumVitae id
         return response()->json([
             'message' => 'Curriculum Vitae found',
             'curriculum_vitae_id' => $curriculumVitae->id,

@@ -66,7 +66,6 @@ class SaveCvController extends Controller
      */
     public function getAllByProvider($provider_id)
     {
-        // Validate provider_id exists
         $providerExists = \App\Models\Provider::where('id', $provider_id)->exists();
 
         if (!$providerExists) {
@@ -75,7 +74,6 @@ class SaveCvController extends Controller
             ], 404);
         }
 
-        // Fetch all records matching the provider_id with curriculum vitae details
         $futures = Future::with([
             'curriculumVitae.seeker',
             'curriculumVitae.seekerSkills.skill', // Load related skills
@@ -85,7 +83,6 @@ class SaveCvController extends Controller
             ->where('provider_id', $provider_id)
             ->get();
 
-        // Format the response to include skill names
         $response = $futures->map(function ($future) {
             $cv = $future->curriculumVitae;
 

@@ -11,7 +11,6 @@ class JobSkillsController extends Controller
     public function jobskills()
     {
         try {
-            // Fetch all requirements with related job postings using eager loading
             $requirements = JobSkill::with('jobPosting')->get();
             return response()->json($requirements);
         } catch (\Exception $e) {

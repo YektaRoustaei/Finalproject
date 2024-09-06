@@ -2,28 +2,24 @@
 
 namespace Database\Factories;
 
+use App\Models\City;
+use App\Models\Seeker;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Facades\Hash;
 
-/**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Seeker>
- */
+
 class SeekerFactory extends Factory
 {
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
-    public function definition(): array
+    protected $model = Seeker::class;
+
+    public function definition()
     {
         return [
             'first_name' => $this->faker->firstName,
             'last_name' => $this->faker->lastName,
             'email' => $this->faker->unique()->safeEmail,
-            'address' => $this->faker->address,
+            'city_id' => City::factory(), // Ensure this is correct
             'phonenumber' => $this->faker->phoneNumber,
-            'password' => Hash::make('password123'),
+            'password' => $this->faker->password,
         ];
     }
 }

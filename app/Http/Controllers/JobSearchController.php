@@ -90,7 +90,6 @@ class JobSearchController extends Controller
 
     protected function getSynonyms(string $searchTerm): array
     {
-        // Fetch synonyms for the search term
         $synonyms = Synonym::where('title', $searchTerm)
             ->first();
 
@@ -105,7 +104,6 @@ class JobSearchController extends Controller
             ];
         }
 
-        // Return an empty array if no synonyms found
         return [];
     }
 
@@ -145,10 +143,8 @@ class JobSearchController extends Controller
 
         $jobs = $jobsQuery->get();
 
-        // If needed, check if $jobs is null or empty
         if ($jobs->isEmpty()) {
-            // Handle case where no jobs are found
-            $jobs = collect(); // Return an empty collection
+            $jobs = collect();
         }
 
         return $jobs;
@@ -156,7 +152,7 @@ class JobSearchController extends Controller
 
     protected function calculateDistance(float $latitudeFrom, float $longitudeFrom, float $latitudeTo, float $longitudeTo): float
     {
-        $earthRadius = 6371; // Radius of the Earth in kilometers
+        $earthRadius = 6371;
 
         $latFrom = deg2rad($latitudeFrom);
         $lonFrom = deg2rad($longitudeFrom);
@@ -164,7 +160,7 @@ class JobSearchController extends Controller
         $lonTo = deg2rad($longitudeTo);
 
         $latDelta = $latTo - $latFrom;
-        $lonDelta = $lonTo - $lonFrom;
+        $lonDelta = $lonTo - $longitudeFrom;
 
         $angle = 2 * asin(sqrt(pow(sin($latDelta / 2), 2) +
                 cos($latFrom) * cos($latTo) * pow(sin($lonDelta / 2), 2)));

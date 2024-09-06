@@ -13,7 +13,6 @@ class CreateJobController extends Controller
 {
     public function store(Request $request)
     {
-        // Validate incoming request
         $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'required|string',
@@ -31,7 +30,6 @@ class CreateJobController extends Controller
         DB::beginTransaction();
 
         try {
-            // Create the job posting
             $job = auth('sanctum')->user()->jobPostings()->create([
                 'title' => $request->title,
                 'description' => $request->description,
@@ -42,12 +40,10 @@ class CreateJobController extends Controller
                 'question' => $request->question,
             ]);
 
-            // Attach categories to the job
             if ($request->has('category_ids')) {
                 $job->categories()->sync($request->category_ids);
             }
 
-            // Handle jobskills and link them to the job posting
             if ($request->has('jobskills')) {
                 $skillIds = [];
                 foreach ($request->jobskills as $skillName) {
@@ -59,7 +55,6 @@ class CreateJobController extends Controller
 
             DB::commit();
 
-            // Load relationships for response
             $job = $job->load('categories', 'provider', 'skills');
 
             return response()->json([
@@ -84,7 +79,6 @@ class CreateJobController extends Controller
 
     public function update(Request $request, $id)
     {
-        // Validate incoming request
         $request->validate([
             'title' => 'sometimes|required|string|max:255',
             'description' => 'sometimes|required|string',
@@ -107,13 +101,11 @@ class CreateJobController extends Controller
                 'title', 'description', 'salary', 'type', 'expiry_date', 'cover_letter', 'question'
             ]));
 
-            // Update categories if provided
             if ($request->has('category_ids')) {
                 $validCategoryIds = Category::whereIn('id', $request->category_ids)->pluck('id')->toArray();
                 $job->categories()->sync($validCategoryIds); // Sync the categories
             }
 
-            // Update skills if provided
             if ($request->has('jobskills')) {
                 $validSkills = [];
                 foreach ($request->jobskills as $skillName) {
@@ -153,11 +145,9 @@ class CreateJobController extends Controller
         try {
             $job = JobPosting::findOrFail($id);
 
-            // Detach categories and skills
             $job->categories()->detach();
             $job->skills()->detach();
 
-            // Delete the job posting
             $job->delete();
 
             DB::commit();

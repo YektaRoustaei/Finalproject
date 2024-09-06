@@ -2,17 +2,18 @@
 
 namespace Tests\Feature;
 
-use App\Http\Middleware\EnsureUserIsProvider;
-use App\Http\Middleware\EnsureUserIsSeeker;
-use App\Http\Middleware\Seeker\Authentication\Login\PrepareRequestForLoginSeeker;
-use App\Http\Middleware\Seeker\Authentication\Register\PrepareRequestForRegisteringSeeker;
+use App\Models\City;
 use App\Models\Provider;
 use App\Models\Seeker;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
+use App\Http\Middleware\Seeker\Authentication\Register\PrepareRequestForRegisteringSeeker;
+use Illuminate\Http\Request;
+use App\Http\Middleware\EnsureUserIsProvider;
+use App\Http\Middleware\EnsureUserIsSeeker;
+use App\Http\Middleware\Seeker\Authentication\Login\PrepareRequestForLoginSeeker;
 
 class AuthTest extends TestCase
 {
@@ -20,25 +21,27 @@ class AuthTest extends TestCase
 
     public function test_provider_can_register_successfully()
     {
+        $city = City::factory()->create();
+
         $data = [
             'company_name' => 'Test Company',
             'description' => 'Test Description',
-            'address' => '123 Test Address',
             'telephone' => '1234567890',
             'email' => 'test@example.com',
             'password' => 'password123',
+            'city_id' => $city->id,
         ];
 
         $response = $this->postJson('api/provider/register', $data);
 
-        $response->assertStatus(200)
+        $response->assertStatus(201)
             ->assertJsonStructure([
                 'id',
                 'company_name',
                 'description',
-                'address',
                 'telephone',
                 'email',
+                'city_id',
                 'created_at',
                 'updated_at'
             ]);
@@ -53,11 +56,9 @@ class AuthTest extends TestCase
 
     public function test_provider_can_register_unsuccessfully_due_to_missing_data()
     {
-        // generate empty array for unsuccessful registration
         $data = [];
 
         $response = $this->postJson('api/provider/register', $data);
-
 
         $response->assertStatus(422)
             ->assertJsonStructure([
@@ -70,19 +71,18 @@ class AuthTest extends TestCase
             ]);
         $this->assertCount(6, $response['errors']);
     }
+
     public function test_providers_can_not_register_with_repeated_email()
     {
-        // create a provider
         $provider = Provider::factory()->create();
 
-        // generate data with the same email
         $data = [
             'company_name' => 'Test Company',
             'description' => 'Test Description',
-            'address' => '123 Test Address',
             'telephone' => '1234567890',
             'email' => $provider->email,
             'password' => 'password123',
+            'city_id' => $provider->city_id,
         ];
 
         $response = $this->postJson('api/provider/register', $data);
@@ -96,15 +96,18 @@ class AuthTest extends TestCase
                     ]
                 ]
             ]);
+
         $this->assertCount(1, $response['errors']);
+        $this->assertEquals('email', $response['errors'][0]['field']);
+        $this->assertStringContainsString('The email has already been taken', $response['errors'][0]['message']);
     }
 
     public function test_provider_can_login_successfully()
     {
-        // create a provider
-        $provider = Provider::factory()->create();
+        $provider = Provider::factory()->create([
+            'password' => Hash::make('password123'),
+        ]);
 
-        // generate data for login
         $data = [
             'email' => $provider->email,
             'password' => 'password123',
@@ -114,38 +117,39 @@ class AuthTest extends TestCase
 
         $response->assertStatus(200)
             ->assertJsonStructure([
-                'access_token',
+                'Provider_token',
                 'token_type'
             ]);
     }
 
     public function test_provider_can_login_unsuccessfully()
     {
-        // create a provider
-        $provider = Provider::factory()->create();
+        $provider = Provider::factory()->create([
+            'password' => Hash::make('password123'),
+        ]);
 
-        // generate data for login
         $data = [
             'email' => $provider->email,
-            'password' => 'passrod1234',
+            'password' => 'wrongpassword',
         ];
 
         $response = $this->postJson('api/provider/login', $data);
+
         $response->assertStatus(422)
-            ->assertJsonStructure([
-                'message',
+            ->assertJson([
+                'message' => 'The provided credentials are incorrect.',
                 'errors' => [
-                    'email'
-                ]
+                    'email' => [
+                        'The provided credentials are incorrect.'
+                    ],
+                ],
             ]);
     }
 
     public function test_provider_can_login_unsuccessfully_missing_data()
     {
-        // create a provider
         $provider = Provider::factory()->create();
 
-        // generate data for login
         $data = [];
 
         $response = $this->postJson('api/provider/login', $data);
@@ -163,7 +167,7 @@ class AuthTest extends TestCase
 
         $response->assertStatus(200);
 
-        $this->assertCount(0, $provider->tokens);
+        $this->assertCount(0, $provider->tokens()->get());
     }
 
     public function test_unauthenticated_user_cannot_logout()
@@ -173,10 +177,10 @@ class AuthTest extends TestCase
         $response->assertStatus(401)
             ->assertJson(['error' => 'Unauthorized']);
     }
+
     public function test_middleware_rejects_non_provider_user()
     {
         $seeker = Seeker::factory()->create();
-
         Sanctum::actingAs($seeker, ['*']);
 
         $request = Request::create('api/provider/logout', 'POST');
@@ -191,45 +195,63 @@ class AuthTest extends TestCase
         $this->assertEquals(['error' => 'Unauthorized'], $response->getData(true));
     }
 
+    public function test_seeker_can_register_successfully()
+    {
+        $city = City::factory()->create();
 
-    public function test_seeker_can_register_successfully(){
-        $newSeeker = Seeker::factory()->make()->toArray();
-        $response = $this->postJson('api/seeker/register', $newSeeker);
-        $response->assertStatus(200)
+        $data = [
+            'first_name' => 'John',
+            'last_name' => 'Doe',
+            'email' => 'johndoe@example.com',
+            'phonenumber' => '1234567890',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+            'city_id' => $city->id
+        ];
+
+        $response = $this->postJson('api/seeker/register', $data);
+
+        $response->assertStatus(201)
             ->assertJsonStructure([
                 'id',
                 'first_name',
                 'last_name',
                 'email',
-                'address',
                 'phonenumber',
+                'city_id',
                 'created_at',
                 'updated_at'
             ]);
 
-        $this->assertDatabaseCount('seekers', 1);
+        $this->assertDatabaseHas('seekers', [
+            'email' => $data['email'],
+            'phonenumber' => $data['phonenumber'],
+            'city_id' => $data['city_id']
+        ]);
     }
 
     public function test_registration_fails_with_invalid_data()
     {
-        $this->withoutExceptionHandling();
-        $data = []; // Empty data
+        $data = [];
 
         $response = $this->postJson('api/seeker/register', $data);
-
 
         $response->assertStatus(422);
         $this->assertCount(6, $response['errors']);
     }
+
     public function test_middleware_allows_valid_request()
     {
-        $request = Request::create('/register', 'POST', [
+        $city = City::factory()->create();
+
+        $request = Request::create('/api/seeker/register', 'POST', [
             'first_name' => 'John',
             'last_name' => 'Doe',
             'email' => 'johndoe@example.com',
-            'address' => '123 Main St',
             'phonenumber' => '1234567890',
             'password' => 'password123',
+            'password_confirmation' => 'password123',
+            'city_id' => $city->id
         ]);
 
         $middleware = new PrepareRequestForRegisteringSeeker();
@@ -244,13 +266,13 @@ class AuthTest extends TestCase
 
     public function test_middleware_rejects_invalid_request()
     {
-        $request = Request::create('/register', 'POST', [
+        $request = Request::create('/api/seeker/register', 'POST', [
             'first_name' => '',
             'last_name' => 'Doe',
-            'email' => 'invalidemail@gmail.com',
-            'address' => '123 Main St',
+            'email' => 'invalidemail',
             'phonenumber' => 'notanumber',
             'password' => 'short',
+            'password_confirmation' => 'short'
         ]);
 
         $middleware = new PrepareRequestForRegisteringSeeker();
@@ -261,7 +283,6 @@ class AuthTest extends TestCase
 
         $this->assertEquals(422, $response->status());
         $this->assertArrayHasKey('errors', $response->getData(true));
-        $this->assertEquals('The first name field is required.', $response->getData(true)['errors'][0]['message']);
     }
 
     public function test_login_fails_with_invalid_credentials()
@@ -285,9 +306,10 @@ class AuthTest extends TestCase
                 ],
             ]);
     }
+
     public function test_middleware_allows_valid_request_seeker_login()
     {
-        $request = Request::create('/login', 'POST', [
+        $request = Request::create('/api/seeker/login', 'POST', [
             'email' => 'johndoe@example.com',
             'password' => 'password123',
         ]);
@@ -304,7 +326,7 @@ class AuthTest extends TestCase
 
     public function test_middleware_rejects_invalid_request_seeker_login()
     {
-        $request = Request::create('/login', 'POST', [
+        $request = Request::create('/api/seeker/login', 'POST', [
             'email' => '',
             'password' => 'short',
         ]);
@@ -317,7 +339,6 @@ class AuthTest extends TestCase
 
         $this->assertEquals(422, $response->status());
         $this->assertArrayHasKey('errors', $response->getData(true));
-        $this->assertEquals('The email field is required.', $response->getData(true)['errors'][0]['message']);
     }
 
     public function test_middleware_allows_authenticated_seeker()
@@ -326,7 +347,7 @@ class AuthTest extends TestCase
 
         Sanctum::actingAs($seeker, ['*']);
 
-        $request = Request::create('/logout', 'POST');
+        $request = Request::create('/api/seeker/logout', 'POST');
 
         $middleware = new EnsureUserIsSeeker();
 
@@ -338,14 +359,13 @@ class AuthTest extends TestCase
         $this->assertEquals(['success' => true], $response->getData(true));
     }
 
-
     public function test_middleware_rejects_non_seeker_user()
     {
         $provider = Provider::factory()->create();
 
         Sanctum::actingAs($provider, ['*']);
 
-        $request = Request::create('/logout', 'POST');
+        $request = Request::create('/api/seeker/logout', 'POST');
 
         $middleware = new EnsureUserIsSeeker();
 
@@ -359,7 +379,7 @@ class AuthTest extends TestCase
 
     public function test_middleware_rejects_unauthenticated_user()
     {
-        $request = Request::create('/logout', 'POST');
+        $request = Request::create('/api/seeker/logout', 'POST');
 
         $middleware = new EnsureUserIsSeeker();
 

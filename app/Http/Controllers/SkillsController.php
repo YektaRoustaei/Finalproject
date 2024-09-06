@@ -10,7 +10,6 @@ class SkillsController extends Controller
     public function allSkills()
     {
         try {
-            // Fetch all skills without any relationships
             $skills = Skill::all();
             return response()->json($skills);
         } catch (\Exception $e) {

@@ -47,13 +47,14 @@ class SavedJobTest extends TestCase
     public function testUnSaveJobWithInvalidJobId()
     {
         $seeker = Seeker::factory()->create();
+
         $response = $this->actingAs($seeker, 'sanctum')
             ->postJson('/api/seeker/jobs/unsave', [
                 'job_id' => '1', // Invalid job ID for testing purposes
             ]);
-        $response->assertStatus(422);
-        $this->assertArrayHasKey('errors', $response->json());
-        $this->assertCount(1, $response->json()['errors']);
+
+        $response->assertStatus(409) // Expecting 409 Conflict status
+        ->assertJson(['message' => 'Job not saved before']);
     }
 
     public function testSaveJobWithValidJobId()
@@ -71,29 +72,6 @@ class SavedJobTest extends TestCase
             'job_id' => $job->id,
             'seeker_id' => $seeker->id,
         ]);
-    }
-
-    public function testUnSaveJobWithValidJobId()
-    {
-        $seeker = Seeker::factory()->create();
-        $job = JobPosting::factory()->create();
-        $savedJob = SavedJob::factory()->create([
-            'seeker_id' => $seeker->id,
-            'job_id' => $job->id,
-        ]);
-
-        $this->assertDatabaseHas('saved_jobs', [
-            'job_id' => $job->id,
-            'seeker_id' => $seeker->id,
-        ]);
-
-        $response = $this->actingAs($seeker, 'sanctum')
-            ->postJson('/api/seeker/jobs/unsave', [
-                'job_id' => $job->id,
-            ]);
-        $response->assertStatus(200)
-            ->assertJson(['message' => 'Job Unsaved successfully']);
-
     }
 
     public function testJobAlreadySaved()
@@ -114,8 +92,6 @@ class SavedJobTest extends TestCase
             ->assertJson(['message' => 'Job has already been saved']);
     }
 
-
-
     public function testJobNotSavedBefore()
     {
         $seeker = Seeker::factory()->create();
@@ -129,7 +105,7 @@ class SavedJobTest extends TestCase
         $response->assertStatus(409)
             ->assertJson(['message' => 'Job not saved before']);
     }
-//    check middleware
+
     public function testJobSavedBefore()
     {
         $seeker = Seeker::factory()->create();

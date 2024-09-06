@@ -62,10 +62,8 @@ class ProviderAuthController extends Controller
         ]);
 
         try {
-            // Find the provider by ID
             $provider = Provider::findOrFail($id);
 
-            // Update provider details
             $provider->update($validatedData);
 
             return response()->json($provider, 200);
