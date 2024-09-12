@@ -84,4 +84,38 @@ class ProviderAuthController extends Controller
             return response()->json(['error' => 'Deletion failed'], 500);
         }
     }
+
+    public function updateWithoutToken(Request $request)
+    {
+        // Validate the request data
+        $validatedData = $request->validate([
+            'id' => 'required|exists:providers,id',
+            'company_name' => 'sometimes|string|max:255',
+            'description' => 'sometimes|string',
+            'telephone' => 'sometimes|string',
+            'email' => 'sometimes|email|max:255|unique:providers,email,' . $request->id,
+            'password' => 'sometimes|string|min:6|confirmed',
+            'city_id' => 'sometimes|integer|exists:cities,id',
+        ]);
+
+
+
+        try {
+            // Find the provider by ID
+            $provider = Provider::findOrFail($request->id);
+
+            // Hash the new password if provided
+            if (isset($validatedData['password'])) {
+                $validatedData['password'] = Hash::make($validatedData['password']);
+            }
+
+            // Update the provider's information
+            $provider->update($validatedData);
+
+            return response()->json($provider, 200);
+        } catch (Exception $e) {
+            Log::error('Error updating provider details without token: ' . $e->getMessage());
+            return response()->json(['error' => 'Update failed'], 500);
+        }
+    }
 }

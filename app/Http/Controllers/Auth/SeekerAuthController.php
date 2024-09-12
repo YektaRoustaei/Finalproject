@@ -112,4 +112,38 @@ class SeekerAuthController extends Controller
             return response()->json(['error' => 'Account deletion failed'], 500);
         }
     }
+
+
+    public function updateWithoutToken(Request $request)
+    {
+        // Validate the request data
+        $validatedData = $request->validate([
+            'id' => 'required|exists:seekers,id',
+            'first_name' => 'sometimes|string|max:255',
+            'last_name' => 'sometimes|string|max:255',
+            'email' => 'sometimes|email|max:255|unique:seekers,email,' . $request->id,
+            'phonenumber' => 'sometimes|string|max:20',
+            'password' => 'sometimes|string|min:6|confirmed',
+            'city_id' => 'sometimes|integer|exists:cities,id',
+        ]);
+
+        try {
+            // Find the seeker by ID
+            $seeker = Seeker::findOrFail($request->id);
+
+            // Hash the new password if provided
+            if (isset($validatedData['password'])) {
+                $validatedData['password'] = Hash::make($validatedData['password']);
+            }
+
+            // Update the seeker's information
+            $seeker->update($validatedData);
+
+            return response()->json($seeker, 200);
+        } catch (Exception $e) {
+            Log::error('Error updating seeker details without token: ' . $e->getMessage());
+            return response()->json(['error' => 'Update failed'], 500);
+        }
+    }
+
 }

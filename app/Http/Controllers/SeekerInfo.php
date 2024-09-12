@@ -21,13 +21,14 @@ class SeekerInfo extends Controller
         $seeker = Auth::guard('sanctum')->user()->load('city');
 
         $savedJobs = $seeker->savedJobs;
+
         $appliedJobs = $seeker->appliedJobs->map(function ($appliedJob) {
             return [
                 'job_id' => $appliedJob->job_id,
                 'status' => $appliedJob->status,
                 'curriculum_vitae_id' => $appliedJob->curriculum_vitae_id,
                 'cover_letter_id' => $appliedJob->cover_letter_id,
-                'created_at' => $appliedJob->created_at->toIso8601String(), // Include created_at in ISO 8601 format
+                'created_at' => $this->formatDate($appliedJob->created_at), // Include created_at in ISO 8601 format
             ];
         });
 

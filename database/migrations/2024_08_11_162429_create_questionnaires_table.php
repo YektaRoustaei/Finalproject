@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('job_id')->constrained('job_postings')->onDelete('cascade'); // Defines foreign key
             $table->string('question');
             $table->enum('answer_type', ['string', 'int']); // Defines allowed answer types
-            $table->integer('min_value'); // Makes min_value mandatory
+            $table->integer('min_value')->nullable();
             $table->integer('max_value')->nullable(); // Max value is optional
             $table->timestamps();
         });

@@ -14,7 +14,7 @@ class QuestionnaireController extends Controller
             'questions' => 'required|array',
             'questions.*.question' => 'required|string|max:255',
             'questions.*.answer_type' => 'required|in:string,int',
-            'questions.*.min_value' => 'required|integer',
+            'questions.*.min_value' => 'nullable|integer', // min_value is now nullable
             'questions.*.max_value' => 'nullable|integer',
         ]);
 
@@ -24,7 +24,7 @@ class QuestionnaireController extends Controller
                 'job_id' => $validatedData['job_id'],
                 'question' => $questionData['question'],
                 'answer_type' => $questionData['answer_type'],
-                'min_value' => $questionData['min_value'],
+                'min_value' => $questionData['min_value'] ?? null, // Default to null if not provided
                 'max_value' => $questionData['max_value'] ?? null,
             ]);
         }
@@ -40,7 +40,7 @@ class QuestionnaireController extends Controller
             'job_id' => 'required|exists:job_postings,id',
             'question' => 'required|string|max:255',
             'answer_type' => 'required|in:string,int',
-            'min_value' => 'required|integer',
+            'min_value' => 'nullable|integer', // min_value is now nullable
             'max_value' => 'nullable|integer',
         ]);
 

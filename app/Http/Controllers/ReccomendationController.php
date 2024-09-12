@@ -124,6 +124,8 @@ class ReccomendationController extends Controller
                 'matching_skills_count' => $job->matching_skills_count ?? 0,
                 'distance_from_input_city' => $job->distance_from_input_city,
                 'distance_from_seeker_city' => $job->distance_from_seeker_city,
+                'expiry_date' => $job->expiry_date,  // Add expiry date here
+
             ];
         });
 

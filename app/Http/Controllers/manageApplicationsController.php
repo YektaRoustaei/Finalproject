@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\AppliedJob;
 use App\Models\JobPosting;
 
+
 class manageApplicationsController extends Controller
 {
     /**
@@ -45,16 +46,31 @@ class manageApplicationsController extends Controller
             return response()->json(['message' => 'No applications found for this job'], 404);
         }
 
-        $result = $appliedJobs->map(function ($appliedJob) {
+        // Get the job posting
+        $jobPosting = JobPosting::find($jobId);
+
+        // Check if the job posting was found
+        if (!$jobPosting) {
+            return response()->json(['error' => 'Job posting not found'], 404);
+        }
+
+        // Get the required skills from the job posting
+        $requiredSkills = $jobPosting->skills->pluck('name')->toArray();
+
+        $result = $appliedJobs->map(function ($appliedJob) use ($requiredSkills) {
             $curriculumVitae = $appliedJob->curriculumVitae;
             $seekerSkills = $curriculumVitae ? $curriculumVitae->seekerSkills->map(function ($seekerSkill) {
                 return $seekerSkill->skill ? $seekerSkill->skill->name : null;
             })->filter()->values() : [];
 
+            // Calculate the number of matched skills
+            $matchedSkillsCount = count(array_intersect($requiredSkills, $seekerSkills->toArray()));
+
             return [
                 'applied_job_id' => $appliedJob->id,
                 'cv' => $curriculumVitae,
                 'skills' => $seekerSkills, // Include the skill names here
+                'matched_skills_count' => $matchedSkillsCount, // Number of matched skills
                 'job_experiences' => $curriculumVitae ? $curriculumVitae->jobExperiences : [],
                 'educations' => $curriculumVitae ? $curriculumVitae->educations : [],
                 'cover_letter' => $appliedJob->coverLetter,

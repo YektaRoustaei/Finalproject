@@ -57,6 +57,8 @@ Route::prefix('provider')->group(function () {
     Route::get('all', [ProviderInfo::class, 'getAllProviders']);
     Route::delete('delete/{id}', [ProviderAuthController::class,'delete']);
     Route::put('edit/{id}', [ProviderAuthController::class,'update']);
+    Route::put('edit-without-token',[ProviderAuthController::class,'updateWithoutToken']);
+
 
 
     Route::middleware([EnsureUserIsProvider::class])->prefix('jobs')->group(function () {
@@ -79,6 +81,7 @@ Route::put('updatejob/{id}', [CreateJobController::class, 'update']);
 
 
 
+
 Route::prefix('admin')->group(function () {
     Route::post('login', [AdminAuthController::class, 'login'])->middleware([PrepareRequestForLoginAdmin::class,CheckCredentialAdmin::class]);
     Route::post('logout', [AdminAuthController::class, 'logout'])->middleware([EnsureUserIsAdmin::class]);
@@ -93,6 +96,7 @@ Route::prefix('seeker')->group(function () {
     Route::get('all', [SeekerInfo::class,'getAllSeekers']);
 
     Route::put('edit', [SeekerAuthController::class,'update']);
+    Route::put('edit-without-token',[SeekerAuthController::class,'updateWithoutToken']);
     Route::delete('delete', [SeekerAuthController::class,'deleteAccount']);
 
 

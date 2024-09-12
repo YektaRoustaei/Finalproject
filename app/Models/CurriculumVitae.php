@@ -9,6 +9,11 @@ class CurriculumVitae extends Model
 {
     use HasFactory;
 
+    protected $casts = [
+        'created_at'  => 'date:m-d-Y',
+        'updated_at'  => 'date:m-d-Y',
+    ];
+
     protected $fillable = [
         'seeker_id',
     ];
